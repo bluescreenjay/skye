@@ -1,6 +1,9 @@
 import type {
+  AgentRunInput,
+  AgentRunView,
   ClusterRun,
   Message,
+  PlanItem,
   PlacementSource,
   Suggestion,
   TabEvent,
@@ -199,4 +202,53 @@ export function mapSuggestion(row: DbSuggestion): Suggestion {
     createdAt: iso(row.created_at),
     resolvedAt: row.resolved_at ? iso(row.resolved_at) : null,
   };
+}
+
+// ---- Agent runs (feature 010) and plan items -------------------------------------------------
+
+export type DbActionRun = {
+  id: string;
+  user_id: string;
+  workspace_id: string;
+  action_id: string;
+  input: Record<string, unknown> | null;
+  output: Record<string, unknown> | null;
+  status: "pending" | "succeeded" | "failed";
+  created_at: Date | string;
+};
+
+/** The action_runs columns that map to an AgentRunView. Use it in every SELECT/RETURNING that feeds mapActionRun. */
+export const ACTION_RUN_COLUMNS = "id, user_id, workspace_id, action_id, input, output, status, created_at";
+
+const ZERO_INPUT: AgentRunInput = { tabsTotal: 0, tabsIncluded: 0, pagesTried: 0, chatMessages: 0, planItems: 0 };
+
+/** The stored `pending` status is shown to clients as `running`. */
+export function mapActionRun(row: DbActionRun): AgentRunView {
+  const output = row.output ?? null;
+  const succeeded = row.status === "succeeded" && output !== null && "result" in output;
+  const failed = row.status === "failed" && output !== null && typeof output.error === "object" && output.error !== null;
+  return {
+    id: row.id,
+    agentId: row.action_id as AgentRunView["agentId"],
+    state: row.status === "pending" ? "running" : row.status,
+    createdAt: iso(row.created_at),
+    input: { ...ZERO_INPUT, ...(row.input ?? {}) },
+    output: succeeded ? (output as unknown as NonNullable<AgentRunView["output"]>) : null,
+    error: failed ? ((output as { error: AgentRunView["error"] }).error ?? null) : null,
+  };
+}
+
+export type DbPlanItem = {
+  id: string;
+  user_id: string;
+  workspace_id: string;
+  text: string;
+  done: boolean;
+  sort_order: number;
+};
+
+export const PLAN_ITEM_COLUMNS = "id, user_id, workspace_id, text, done, sort_order";
+
+export function mapPlanItem(row: DbPlanItem): PlanItem {
+  return { id: row.id, userId: row.user_id, workspaceId: row.workspace_id, text: row.text, done: row.done, sortOrder: row.sort_order };
 }

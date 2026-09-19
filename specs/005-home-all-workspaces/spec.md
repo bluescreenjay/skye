@@ -28,6 +28,11 @@ Do not “improve” the Home layout into a marketing bento, a bookmark manager,
 - Q: If pairing or the server is missing, should Home show the mock’s dummy workspaces (furniture, type samples, and so on) or an empty real directory? → A: Real data only; empty Home chrome if unpaired, misconfigured, or the server is down. Never seed the mock’s dummy projects as the user’s work.
 - Q: How should someone open Home in the browser? → A: New tab stays the browser default; Home opens only from the extension toolbar.
 
+### Session 2026-09-19 (live Home tabs + close)
+
+- Q: Should Home show saved TabRefs whose browser tabs are closed? → A: No — Home lists only live-bound tabs (`chromeTabId != null`). Backend rows stay; see [clarifications/live-home-tabs.md](clarifications/live-home-tabs.md).
+- Q: Can the person close a Chrome tab from an expanded Home tab row? → A: Yes — right-side close control; durable TabRef is kept.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Land on a map of my work (Priority: P1)

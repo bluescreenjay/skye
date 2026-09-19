@@ -1,6 +1,6 @@
 import type { TabRef } from "@ai-browser/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { openHomeTab } from "../src/home/navigation";
+import { closeHomeTab, openHomeTab } from "../src/home/navigation";
 
 const savedTab = (overrides: Partial<TabRef> = {}): TabRef => ({
   id: "tab-ref-1",
@@ -87,5 +87,39 @@ describe("Home saved-tab navigation", () => {
     await expect(focusOrOpenSavedTab(savedTab())).resolves.toBe("focused");
     expect(updateTab).toHaveBeenCalledWith(42, { active: true });
     expect(openPanel).not.toHaveBeenCalled();
+  });
+});
+
+describe("closeHomeTab", () => {
+  it("removes a matching live Chrome tab", async () => {
+    const get = vi.fn().mockResolvedValue({ id: 42, url: "https://example.com/work", incognito: false });
+    const remove = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("chrome", { tabs: { get, remove } });
+
+    await expect(closeHomeTab(savedTab())).resolves.toBe("closed");
+    expect(remove).toHaveBeenCalledWith(42);
+  });
+
+  it("does not remove when the live URL no longer matches", async () => {
+    const get = vi.fn().mockResolvedValue({ id: 42, url: "https://other.example/", incognito: false });
+    const remove = vi.fn();
+    vi.stubGlobal("chrome", { tabs: { get, remove } });
+
+    await expect(closeHomeTab(savedTab())).resolves.toBe("noop");
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it("treats an already-gone tab as closed", async () => {
+    const remove = vi.fn();
+    vi.stubGlobal("chrome", {
+      tabs: { get: vi.fn().mockRejectedValue(new Error("No tab with id")), remove },
+    });
+
+    await expect(closeHomeTab(savedTab())).resolves.toBe("closed");
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it("no-ops when there is no live chromeTabId", async () => {
+    await expect(closeHomeTab(savedTab({ chromeTabId: null }))).resolves.toBe("noop");
   });
 });

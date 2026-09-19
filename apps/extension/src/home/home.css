@@ -238,12 +238,12 @@ input:focus,
 
 .app-icon:active,
 .rail-icon:active,
-.tab-row:active {
+.tab-row-open:active {
   cursor: grabbing;
 }
 
 .rail-icon,
-.tab-row {
+.tab-row-open {
   cursor: grab;
 }
 
@@ -841,9 +841,9 @@ input:focus,
 .tab-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 2px;
   width: 100%;
-  padding: 11px 12px;
+  padding: 0;
   border: 0;
   border-left: 2px solid transparent;
   background: transparent;
@@ -854,13 +854,35 @@ input:focus,
   border-radius: 0;
 }
 
-.tab-row:hover {
+.tab-row-open {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  padding: 11px 8px 11px 12px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 300;
+  letter-spacing: -0.01em;
+  color: inherit;
+}
+
+.tab-row:hover,
+.tab-row:hover .tab-row-open {
   background: var(--accent-06);
 }
 
 .tab-row.is-active {
   background: var(--accent-06);
   border-left-color: var(--accent);
+}
+
+.tab-row.is-active .tab-row-open {
+  background: var(--accent-06);
 }
 
 .tab-title {
@@ -870,6 +892,31 @@ input:focus,
   white-space: nowrap;
   color: var(--ink);
   font-weight: 300;
+}
+
+.tab-close {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  margin-right: 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 300;
+  line-height: 1;
+  opacity: 0.28;
+  cursor: pointer;
+}
+
+.tab-row:hover .tab-close {
+  opacity: 0.55;
+}
+
+.tab-close:hover {
+  opacity: 0.9;
+  background: var(--accent-10, var(--accent-06));
 }
 
 .band-actions {

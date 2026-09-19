@@ -27,7 +27,6 @@ const MAX_BACKOFF_MS = 8_000;
 /** Which model serves each purpose. Effort lives in the id: low for fast structured work. */
 export const DEFAULT_MODELS: Record<Purpose, string> = {
   cluster: "gpt-oss-120b-thinking-low",
-  plan: "gpt-oss-120b-thinking-low",
   command: "gpt-oss-120b-thinking-low",
   // Low effort for chat too: measured first words 0.3 s, against 0.5 to 4.2 s (varying with load) for medium.
   chat: "gpt-oss-120b-thinking-low",
@@ -105,7 +104,7 @@ export async function vtGenerateJson(options: GenerateJsonOptions): Promise<unkn
   const url = `${vtBaseUrl()}/chat/completions`;
   const doFetch = options.fetchImpl ?? fetch;
   const sleep = options.sleep ?? wait;
-  const deadline = AbortSignal.timeout(DEADLINE_MS);
+  const deadline = AbortSignal.timeout(options.deadlineMs ?? DEADLINE_MS);
   const signal = options.signal ? AbortSignal.any([options.signal, deadline]) : deadline;
 
   let mode: "json_schema" | "json_object" = "json_schema";

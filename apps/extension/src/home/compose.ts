@@ -10,14 +10,19 @@ export interface HomeDirectory {
   cards: WorkspaceCard[];
 }
 
-/** Other = workspaceId == null. Archived workspaces are omitted. Empty named workspaces still get a card. */
+function isLive(tab: TabRef): boolean {
+  return tab.chromeTabId != null;
+}
+
+/** Other = workspaceId == null. Archived workspaces are omitted. Empty named workspaces still get a card. Only live-bound tabs appear. */
 export function composeDirectory(workspaces: Workspace[], tabRefs: TabRef[]): HomeDirectory {
-  const other = tabRefs.filter((tab) => tab.workspaceId == null);
+  const live = tabRefs.filter(isLive);
+  const other = live.filter((tab) => tab.workspaceId == null);
   const cards = workspaces
     .filter((workspace) => workspace.status !== "archived")
     .map((workspace) => ({
       workspace,
-      tabs: tabRefs.filter((tab) => tab.workspaceId === workspace.id),
+      tabs: live.filter((tab) => tab.workspaceId === workspace.id),
     }));
   return { other, cards };
 }
@@ -36,4 +41,26 @@ export function moveTabRef(
     directory.cards.map((card) => card.workspace),
     tabs,
   );
+}
+
+/** Drop a tab from the Home view by TabRef id (optimistic close). */
+export function dropTabById(directory: HomeDirectory, tabId: string): HomeDirectory {
+  return {
+    other: directory.other.filter((tab) => tab.id !== tabId),
+    cards: directory.cards.map((card) => ({
+      ...card,
+      tabs: card.tabs.filter((tab) => tab.id !== tabId),
+    })),
+  };
+}
+
+/** Drop a tab from the Home view by live Chrome tab id (onRemoved). */
+export function dropTabByChromeTabId(directory: HomeDirectory, chromeTabId: number): HomeDirectory {
+  return {
+    other: directory.other.filter((tab) => tab.chromeTabId !== chromeTabId),
+    cards: directory.cards.map((card) => ({
+      ...card,
+      tabs: card.tabs.filter((tab) => tab.chromeTabId !== chromeTabId),
+    })),
+  };
 }

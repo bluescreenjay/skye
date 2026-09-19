@@ -225,14 +225,13 @@ input:focus {
 .tab-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 2px;
   width: 100%;
-  padding: 12px 20px;
+  padding: 0;
   border: 0;
   border-left: 2px solid transparent;
   background: transparent;
   text-align: left;
-  cursor: pointer;
   font: inherit;
   font-size: 13px;
   font-weight: 300;
@@ -240,8 +239,28 @@ input:focus {
   transition: background 0.28s var(--ease-in), border-color 0.28s var(--ease-in);
 }
 
+.tab-row-open {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  padding: 12px 20px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 300;
+  letter-spacing: -0.01em;
+  color: inherit;
+}
+
 .tab-row:hover,
-.tab-row.is-active {
+.tab-row.is-active,
+.tab-row:hover .tab-row-open,
+.tab-row.is-active .tab-row-open {
   background: var(--accent-06);
 }
 

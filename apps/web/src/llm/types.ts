@@ -22,6 +22,8 @@ export interface GenerateJsonOptions {
   fetchImpl?: typeof fetch;
   /** Tests only: replaces every wait (retry backoff). */
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
+  /** One total deadline for the call, including retries and any wait for a slot. Defaults to `DEADLINE_MS`. */
+  deadlineMs?: number;
 }
 
 /** One total deadline for a call, including its retries and any wait for a free slot. */

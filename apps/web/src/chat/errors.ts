@@ -2,7 +2,7 @@
 // (specs/008-workspace-ai-chat/research.md section 11, contracts/http.md). A message never
 // contains a prompt, tab content, message text, or a vendor's response body.
 import type { ChatErrorCode, Message } from "@ai-browser/shared";
-import { BudgetExceededError, ModelError, ModelUnconfiguredError } from "../llm/errors";
+import { describeFailure } from "../llm/situation";
 
 /** The longest message a person may send, in characters (after trimming). */
 export const MAX_MESSAGE_CHARS = 4_000;
@@ -59,23 +59,21 @@ export interface FriendlyError {
  * (busy, quota, daily allowance, VPN); what is shown is written here.
  */
 export function friendlyLlmError(error: unknown): FriendlyError {
-  if (error instanceof ModelUnconfiguredError) {
-    return { status: 503, code: "model_unconfigured", message: "The AI assistant isn't set up on this server yet." };
+  switch (describeFailure(error)) {
+    case "unconfigured":
+      return { status: 503, code: "model_unconfigured", message: "The AI assistant isn't set up on this server yet." };
+    case "busy":
+      return { status: 429, code: "budget_exhausted", message: `The AI assistant is busy right now. ${SAVED} Try again in a moment.` };
+    case "quota":
+      return { status: 429, code: "budget_exhausted", message: `The AI service's quota has been reached. ${SAVED} Try again later.` };
+    case "daily":
+      return { status: 429, code: "budget_exhausted", message: `The daily AI limit has been reached. ${SAVED}` };
+    case "vpn":
+      // The provider's own message also carries an operator hint (an environment variable); a person only needs the VPN part.
+      return { status: 502, code: "model_error", message: `The AI service is only reachable on the VT VPN. Connect to it and try again. ${SAVED}` };
+    default:
+      return { status: 502, code: "model_error", message: `The AI assistant couldn't answer right now. ${SAVED} Try again in a moment.` };
   }
-  if (error instanceof BudgetExceededError) {
-    const said = error.message;
-    const message = /busy/i.test(said)
-      ? `The AI assistant is busy right now. ${SAVED} Try again in a moment.`
-      : /quota/i.test(said)
-        ? `The AI service's quota has been reached. ${SAVED} Try again later.`
-        : `The daily AI limit has been reached. ${SAVED}`;
-    return { status: 429, code: "budget_exhausted", message };
-  }
-  if (error instanceof ModelError && /\bVPN\b/.test(error.message)) {
-    // The provider's own message also carries an operator hint (an environment variable); a person only needs the VPN part.
-    return { status: 502, code: "model_error", message: `The AI service is only reachable on the VT VPN. Connect to it and try again. ${SAVED}` };
-  }
-  return { status: 502, code: "model_error", message: `The AI assistant couldn't answer right now. ${SAVED} Try again in a moment.` };
 }
 
 /** The workspace does not exist for this user (or the id is not a workspace id at all). The route answers 404. */

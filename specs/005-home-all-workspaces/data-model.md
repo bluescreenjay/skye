@@ -23,7 +23,7 @@ All non-archived workspaces appear as **cards** and as **rail tiles** (up to fou
 | `workspaceId` | `null` → Other (rail-top icons); uuid → member of that card |
 | `url` | Open in a browser tab on click |
 | `title` | Tab row label (lowercase) |
-| `chromeTabId` | Not used for Home identity |
+| `chromeTabId` | Live binding: Home lists the tab only when non-null (see clarifications/live-home-tabs.md). Not used as durable identity (still user+url). |
 
 ### Other
 

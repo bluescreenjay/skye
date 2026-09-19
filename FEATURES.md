@@ -362,29 +362,6 @@ Add desktop workspace voice using ElevenLabs in the Chrome sidebar. Users should
 
 ---
 
-## Stretch
-
-### 007b — Chrome tab groups + create workspace
-
-**Stretch** — deferred from 007. Does not gate the MVP cut line.
-
-**What:** Project durable workspace membership onto Chrome tab groups, and let Home create empty named workspaces.
-
-**In scope**
-- Home **create workspace** control (POST `/api/workspaces`) and place a tab into it via drag
-- After successful membership/rename (and optionally organize), reconcile open eligible tabs into Chrome groups titled like their workspaces; ungroup Other
-- Two-way honesty: if the user drags a tab out of a Chrome group in the browser, Home membership should eventually match (or document one-way-only if that’s the chosen model)
-- `tabGroups` permission in a dedicated apply module; ingest stays observe-only
-
-**Out of scope:** ML retraining; inventing membership without a server write
-
-**Depends on:** 007  
-**Done when:** Open tabs sit in Chrome groups that match Home, and creating a workspace on Home works without fighting browser group edits.
-
-**Why deferred:** One-way group sync left Home out of date when the user moved tabs in Chrome; needs a clearer sync model before shipping.
-
----
-
 ### 010b — MCP + local action tools
 
 **What:** Real executable tools behind workspace agents and (later) chat/command bar: a small MCP client for GitHub, Notion, Slack, Jira, and Google Drive, plus first-party local/browser tools that need no third-party account. VT ARC (or Gemini) stays the LLM; this feature adds the tool layer, not a new model vendor. The full catalog lives on the server; the UI does **not** dump every tool as a permanent button. A suggestion agent reads workspace context (tabs, summary, plan, credentials available) and proposes a small set of the best next actions; the product **dynamically renders buttons** for those suggestions (label, tool id, prefilled args). The user still confirms by clicking—tools do not run silently.

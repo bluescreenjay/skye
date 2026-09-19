@@ -47,7 +47,6 @@ describe("VT / OpenAI-compatible provider: the request", () => {
   it("uses fast low-effort models for structured work and chat, and the medium model for actions", () => {
     expect(DEFAULT_MODELS).toEqual({
       cluster: "gpt-oss-120b-thinking-low",
-      plan: "gpt-oss-120b-thinking-low",
       command: "gpt-oss-120b-thinking-low",
       chat: "gpt-oss-120b-thinking-low",
       actions: "gpt-oss-120b",
@@ -60,7 +59,7 @@ describe("VT / OpenAI-compatible provider: the request", () => {
     expect(vtModelFor("chat")).toBe("general-model");
     process.env.LLM_MODEL_CHAT = "chat-model";
     expect(vtModelFor("chat")).toBe("chat-model");
-    expect(vtModelFor("plan")).toBe("general-model");
+    expect(vtModelFor("command")).toBe("general-model");
   });
 
   it("honours LLM_BASE_URL (trailing slash trimmed) and accepts LLM_API_KEY in place of VT_LLM_API_KEY", async () => {
@@ -241,7 +240,7 @@ describe("VT / OpenAI-compatible provider: the local concurrency limiter", () =>
     };
     // three purposes on two variants of the same model family: they share one pool
     const calls = Array.from({ length: 24 }, (_, i) =>
-      vtGenerateJson({ purpose: (["cluster", "chat", "plan"] as const)[i % 3], prompt: "p", schema: SCHEMA, fetchImpl: fetchImpl as unknown as typeof fetch, sleep: noSleep }),
+      vtGenerateJson({ purpose: (["cluster", "chat", "actions"] as const)[i % 3], prompt: "p", schema: SCHEMA, fetchImpl: fetchImpl as unknown as typeof fetch, sleep: noSleep }),
     );
     await expect(Promise.all(calls)).resolves.toHaveLength(24);
     expect(peak).toBe(8);
@@ -264,5 +263,18 @@ describe("VT / OpenAI-compatible provider: the local concurrency limiter", () =>
     expect(fetchImpl).not.toHaveBeenCalled();
     release();
     await first;
+  });
+});
+
+describe("VT provider: a per-call deadline (deadlineMs)", () => {
+  it("ends a call that never answers at its own deadline, well before the default one", async () => {
+    const fetchImpl = vi.fn((_url: string, init: RequestInit) => new Promise<Response>((_resolve, reject) => {
+      init.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+    })) as unknown as typeof fetch;
+    const started = Date.now();
+    await expect(
+      vtGenerateJson({ purpose: "actions", prompt: "p", schema: SCHEMA, fetchImpl, sleep: noSleep, deadlineMs: 50 }),
+    ).rejects.toBeInstanceOf(ModelError);
+    expect(Date.now() - started).toBeLessThan(2_000);
   });
 });

@@ -76,7 +76,7 @@ export async function geminiGenerateJson(options: GenerateJsonOptions): Promise<
   const model = geminiModelFor(options.purpose);
   const doFetch = options.fetchImpl ?? fetch;
   const sleep = options.sleep ?? wait;
-  const deadline = AbortSignal.timeout(DEADLINE_MS);
+  const deadline = AbortSignal.timeout(options.deadlineMs ?? DEADLINE_MS);
   const signal = options.signal ? AbortSignal.any([options.signal, deadline]) : deadline;
 
   const body = JSON.stringify({

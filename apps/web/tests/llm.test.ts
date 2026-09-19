@@ -33,15 +33,15 @@ describe("daily AI-call budget (research section 18)", () => {
     process.env.LLM_DAILY_CAP = "2";
     spend("chat");
     spend("cluster");
-    expect(() => spend("plan")).toThrow(BudgetExceededError);
+    expect(() => spend("command")).toThrow(BudgetExceededError);
     expect(usage().total).toBe(2);
   });
 
   it("lets a purpose use its own share, then the spill-over pool, then stops", () => {
-    for (let i = 0; i < SHARES.plan; i += 1) spend("plan");
-    for (let i = 0; i < SPILL_OVER; i += 1) spend("plan"); // draws on the shared pool
-    expect(usage().byPurpose.plan).toBe(SHARES.plan + SPILL_OVER);
-    expect(() => spend("plan")).toThrow(BudgetExceededError);
+    for (let i = 0; i < SHARES.command; i += 1) spend("command");
+    for (let i = 0; i < SPILL_OVER; i += 1) spend("command"); // draws on the shared pool
+    expect(usage().byPurpose.command).toBe(SHARES.command + SPILL_OVER);
+    expect(() => spend("command")).toThrow(BudgetExceededError);
     // Another purpose still has its own share left, but the shared pool is gone.
     spend("cluster");
     expect(usage().byPurpose.cluster).toBe(1);
@@ -159,5 +159,28 @@ describe("Gemini backup provider (llm/gemini.ts)", () => {
     const error = (await call(fetchImpl, { signal: controller.signal }).catch((e) => e)) as Error;
     expect(error).toBeInstanceOf(ModelError);
     expect(error.message).toContain("in time");
+  });
+});
+
+describe("feature 010: the plan purpose is gone and agents have their own share", () => {
+  it("has four purposes, gives actions 120, and the shares plus the spill-over pool add up to the daily cap", () => {
+    expect(Object.keys(SHARES).sort()).toEqual(["actions", "chat", "cluster", "command"]);
+    expect(SHARES.actions).toBe(120);
+    expect(Object.values(SHARES).reduce((a, b) => a + b, 0) + SPILL_OVER).toBe(DEFAULT_DAILY_CAP);
+  });
+});
+
+describe("Gemini: a per-call deadline (deadlineMs)", () => {
+  const hangs = () =>
+    vi.fn((_url: string, init: RequestInit) => new Promise<Response>((_resolve, reject) => {
+      init.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+    })) as unknown as typeof fetch;
+
+  it("ends a call that never answers at its own deadline, well before the default one", async () => {
+    const started = Date.now();
+    await expect(
+      generateJson({ purpose: "actions", prompt: "p", schema: SCHEMA, fetchImpl: hangs(), sleep: async () => undefined, deadlineMs: 50 }),
+    ).rejects.toBeInstanceOf(ModelError);
+    expect(Date.now() - started).toBeLessThan(2_000);
   });
 });

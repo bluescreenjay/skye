@@ -3,8 +3,14 @@ import type { TabRef, Workspace } from "@ai-browser/shared";
 import { TabMark } from "../ui/TabMark";
 import { TabRow } from "../ui/TabRow";
 import { loadDirectory, moveTab, renameWorkspace, runCluster } from "./api";
-import { composeDirectory, type HomeDirectory } from "./compose";
-import { openHomeTab } from "./navigation";
+import {
+  composeDirectory,
+  dropTabByChromeTabId,
+  dropTabById,
+  type HomeDirectory,
+} from "./compose";
+import { createCloseInFlight } from "./close-inflight";
+import { closeHomeTab, openHomeTab } from "./navigation";
 import type { OrganizeStatus } from "./organize";
 import { loadWeatherPhrase } from "./weather";
 import { WorkspaceChat } from "./WorkspaceChat";
@@ -42,8 +48,10 @@ export function Home() {
   const [enterMotion, setEnterMotion] = useState(true);
   const suppressClicksUntil = useRef(0);
   const dragId = useRef<string | null>(null);
+  const dragChromeId = useRef<number | null>(null);
   const dragRaf = useRef<number | null>(null);
   const organizing = useRef(false);
+  const closing = useRef(createCloseInFlight());
 
   const refresh = useCallback(async () => {
     const { workspaces, tabRefs } = await loadDirectory();
@@ -54,6 +62,24 @@ export function Home() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    const onRemoved = (chromeTabId: number) => {
+      setDirectory((current) => dropTabByChromeTabId(current, chromeTabId));
+      if (dragChromeId.current !== chromeTabId) return;
+      if (dragRaf.current != null) {
+        cancelAnimationFrame(dragRaf.current);
+        dragRaf.current = null;
+      }
+      dragId.current = null;
+      dragChromeId.current = null;
+      setDraggingId(null);
+      setDropTarget(null);
+      suppressClicksUntil.current = Date.now() + 200;
+    };
+    chrome.tabs.onRemoved.addListener(onRemoved);
+    return () => chrome.tabs.onRemoved.removeListener(onRemoved);
+  }, []);
 
   useEffect(() => {
     void loadWeatherPhrase().then(setWeather);
@@ -100,6 +126,7 @@ export function Home() {
       dragRaf.current = null;
     }
     dragId.current = null;
+    dragChromeId.current = null;
     setDraggingId(null);
     setDropTarget(null);
     suppressClicksUntil.current = Date.now() + 200;
@@ -107,6 +134,8 @@ export function Home() {
 
   const onDragStart = (tabId: string) => (event: DragEvent) => {
     dragId.current = tabId;
+    const all = [...directory.other, ...directory.cards.flatMap((card) => card.tabs)];
+    dragChromeId.current = all.find((tab) => tab.id === tabId)?.chromeTabId ?? null;
     event.dataTransfer.setData("text/plain", tabId);
     event.dataTransfer.effectAllowed = "move";
     if (dragRaf.current != null) cancelAnimationFrame(dragRaf.current);
@@ -164,6 +193,17 @@ export function Home() {
     event.stopPropagation();
     if (afterDragClick(event)) return;
     void openHomeTab(tab);
+  };
+
+  const closeTab = (tab: TabRef) => (event: MouseEvent) => {
+    event.stopPropagation();
+    if (afterDragClick(event)) return;
+    if (!closing.current.begin(tab.id)) return;
+    setDirectory((current) => dropTabById(current, tab.id));
+    if (dragId.current === tab.id) endDrag();
+    void closeHomeTab(tab).finally(() => {
+      closing.current.end(tab.id);
+    });
   };
 
   const toggleCard = (workspaceId: string) => (event: MouseEvent) => {
@@ -281,6 +321,7 @@ export function Home() {
             onDragEnd={onDragEnd}
             onToggle={toggleCard(card.workspace.id)}
             onOpenTab={openTab}
+            onCloseTab={closeTab}
             onRename={commitRename}
           />
         ))}
@@ -299,6 +340,7 @@ function WorkspaceCardView({
   onDragEnd,
   onToggle,
   onOpenTab,
+  onCloseTab,
   onRename,
 }: {
   card: HomeDirectory["cards"][number];
@@ -313,6 +355,7 @@ function WorkspaceCardView({
   onDragEnd: () => void;
   onToggle: (event: MouseEvent) => void;
   onOpenTab: (tab: TabRef) => (event: MouseEvent) => void;
+  onCloseTab: (tab: TabRef) => (event: MouseEvent) => void;
   onRename: (workspace: Workspace, next: string) => Promise<void>;
 }) {
   const name = card.workspace.name.toLowerCase();
@@ -356,6 +399,7 @@ function WorkspaceCardView({
                 onDragStart={onDragStart(tab.id)}
                 onDragEnd={onDragEnd}
                 onClick={onOpenTab(tab)}
+                onClose={onCloseTab(tab)}
               />
             ))}
           </div>

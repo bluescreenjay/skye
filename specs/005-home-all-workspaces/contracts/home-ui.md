@@ -57,7 +57,9 @@ Glassmorphism, sparkle empty states, centered hero, bento marketing, purple grad
 
 ## Interaction
 
-- Click tab mark/row: open `url` in a new browser tab; Home stays.
+- Home lists only live-bound tabs (`chromeTabId != null`) in Other, card icons, and expanded rows.
+- Click tab mark/row: open/focus that page; Home stays.
+- Expanded tab row: mark + lowercase title + right-side close control; close closes the live Chrome tab and MUST NOT also open-navigate. Rail/header icons need not show close.
 - Drag tab between card, rail tile, and Other rail; drop does not also click-open.
 - Rename: inline contenteditable/input on the name; persist on Enter/blur.
 - No create-workspace control.

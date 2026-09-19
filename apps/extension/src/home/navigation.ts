@@ -35,6 +35,24 @@ export async function focusOrOpenSavedTab(tab: TabRef): Promise<"focused" | "ope
   }
 }
 
+/**
+ * Close the live Chrome tab bound to this TabRef, if the id still matches the saved URL.
+ * Missing/stale tabs are treated as already closed (success). Does not delete the TabRef.
+ */
+export async function closeHomeTab(tab: TabRef): Promise<"closed" | "noop"> {
+  if (tab.chromeTabId === null) return "noop";
+
+  try {
+    const liveTab = await chrome.tabs.get(tab.chromeTabId);
+    if (liveTab.url !== tab.url || liveTab.incognito) return "noop";
+    await chrome.tabs.remove(tab.chromeTabId);
+    return "closed";
+  } catch {
+    // Tab already gone or id invalid — same end state as a successful close.
+    return "closed";
+  }
+}
+
 /** Focus a saved live tab from Home and bring its workspace into the Side Panel. */
 export async function openHomeTab(tab: TabRef): Promise<void> {
   if (tab.chromeTabId === null) {

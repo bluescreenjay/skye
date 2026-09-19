@@ -50,7 +50,7 @@ type PlanRow = { text: string; done: boolean };
 const cut = (text: string, max: number) => (text.length > max ? text.slice(0, max) : text);
 
 /** The last turns that fit `LIMITS.historyChars`, dropping the oldest first; the newest turn is always kept. */
-function fitHistory(turns: ChatTurn[]): ChatTurn[] {
+export function fitHistory(turns: ChatTurn[]): ChatTurn[] {
   const kept: ChatTurn[] = [];
   let chars = 0;
   for (let i = turns.length - 1; i >= 0; i -= 1) {

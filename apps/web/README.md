@@ -57,7 +57,7 @@ Configure in the repo-root `.env` (see `.env.example`). One AI provider is activ
 | --- | --- | --- |
 | `LLM_PROVIDER` | `vt` | `vt` = Virginia Tech ARC LLM API (default); `gemini` = Google Gemini (backup, works from any network) |
 | `VT_LLM_API_KEY` | none | your personal VT key. **The VT API works only on the VT Campus VPN**; off it every call fails with a message saying so |
-| `LLM_MODEL`, `LLM_MODEL_CLUSTER`, ... | `gpt-oss-120b-thinking-low` (clustering, plans, commands, chat), `gpt-oss-120b` (actions) | VT model ids; effort is part of the id |
+| `LLM_MODEL`, `LLM_MODEL_CLUSTER`, ... | `gpt-oss-120b-thinking-low` (clustering, commands, chat), `gpt-oss-120b` (actions) | VT model ids; effort is part of the id |
 | `LLM_CONCURRENCY` | `8` for gpt-oss-120b | local cap on simultaneous requests (the service allows 10 and rejects the rest) |
 | `GEMINI_API_KEY`, `GEMINI_MODEL` | none, `gemini-3.5-flash-lite` | the backup provider (free tier: 15 requests a minute) |
 | `CLUSTER_CONFIDENCE_BAR` | `0.7` | at or above it a group is applied, below it suggested |

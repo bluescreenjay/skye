@@ -14,7 +14,7 @@ function workspace(id: string, name: string): Workspace {
   };
 }
 
-function tab(id: string, title: string, workspaceId: string | null): TabRef {
+function tab(id: string, title: string, workspaceId: string | null, chromeTabId = 1): TabRef {
   return {
     id,
     userId: "user-1",
@@ -22,7 +22,7 @@ function tab(id: string, title: string, workspaceId: string | null): TabRef {
     url: `https://example.com/${id}`,
     title,
     snippet: "",
-    chromeTabId: null,
+    chromeTabId,
     lastSeenAt: "2026-01-01T00:00:00.000Z",
     placementSource: null,
   };
@@ -32,7 +32,7 @@ describe("moveTabRef membership", () => {
   it("moves a workspace tab to Other and back without dummy seed data", () => {
     const start = composeDirectory(
       [workspace("w1", "hackathon")],
-      [tab("t1", "docs", "w1"), tab("t2", "loose", null)],
+      [tab("t1", "docs", "w1", 11), tab("t2", "loose", null, 12)],
     );
 
     const toOther = moveTabRef(start, "t1", null);
