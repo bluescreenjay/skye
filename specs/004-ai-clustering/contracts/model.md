@@ -1,6 +1,6 @@
 # Contract: Clustering model adapter
 
-The only place the AI vendor appears. A vendor pivot (constitution Stack Pivots) replaces the implementation file and nothing else. Code lives in `apps/web/src/llm/` (shared by every AI feature: `gemini.ts` is the only vendor-specific file, plus `errors.ts` and `budget.ts`) and `apps/web/src/cluster/` (`model.ts`: the `ClusterModel` interface, `getModel()` and the test seam, built on the shared client; `prompt.ts`: request building and answer validation).
+The only place the AI vendor appears. A vendor pivot (constitution Stack Pivots) replaces the implementation file and nothing else. Code lives in `apps/web/src/llm/` (shared by every AI feature: `index.ts` picks the provider from `LLM_PROVIDER`; `openai-compat.ts` is the VT ARC provider (default) and `gemini.ts` the backup, the only vendor-specific files; plus `limiter.ts`, `errors.ts`, `budget.ts`, `types.ts`) and `apps/web/src/cluster/` (`model.ts`: the `ClusterModel` interface, `getModel()` and the test seam, built on the shared client; `prompt.ts`: request building and answer validation).
 
 ## Interface
 
@@ -59,7 +59,7 @@ Built by `prompt.ts` from the candidates (research §2):
 }
 ```
 
-Requested as JSON (`responseMimeType: "application/json"`) with a matching response schema. The schema is a hint; the validator below is authoritative.
+Requested as JSON through the active provider: strict `json_schema` on the VT API; `responseMimeType: "application/json"` with a translated `responseSchema` on Gemini. The schema is one canonical standard JSON Schema (`CLUSTER_SCHEMA` in `cluster/model.ts`); each provider translates it. It is a hint; the validator below is authoritative.
 
 ## Validation (in `prompt.ts`)
 
@@ -81,15 +81,20 @@ Discarding a group leaves its tabs in Other.
 
 ## Limits and errors
 
-| Case | Behavior |
-| --- | --- |
-| No `GEMINI_API_KEY` | `ModelUnconfiguredError` → HTTP `503 model_unconfigured` |
-| Daily budget spent (`llm/budget.ts`), checked before any request is sent | `BudgetExceededError` → `429 budget_exhausted` |
-| HTTP `429` from the vendor | `BudgetExceededError` → `429 budget_exhausted`; **never retried** |
-| One total deadline of 25 s (call plus retry) | on expiry `ModelError` → `502 model_error` |
-| HTTP `503` from the vendor | one retry after about 1 s, only if the deadline allows, then `ModelError` |
-| HTTP `404` (retired or unavailable model id) | `ModelError` whose message names the model id and says to change `GEMINI_MODEL` |
-| Other HTTP error, network error, non-JSON answer | `ModelError` |
+Common to both providers: one total 25 s deadline covers the call, its retries, and any wait for a free slot; messages are fixed and generic (never the prompt, tab text, or the server's body); every attempt is counted against the daily budget before it is sent.
+
+| Case | VT ARC provider (default) | Gemini (backup) |
+| --- | --- | --- |
+| No key for the active provider | `ModelUnconfiguredError` → `503 model_unconfigured`; the message names what to set | same |
+| Daily budget spent (`llm/budget.ts`) | `BudgetExceededError` → `429 budget_exhausted` (nothing sent) | same |
+| At capacity: HTTP 400 "concurrent session limit reached", or HTTP 429 | **retried** with backoff (0.5 s, 1 s, 2 s, ...; `retry_after_s` honored), up to 6 attempts; still refused → `BudgetExceededError` ("busy") → `429 budget_exhausted` | HTTP 429 means a quota is used up: **never retried** → `429 budget_exhausted` |
+| A free slot cannot be had before the deadline (local limiter) | `BudgetExceededError` ("busy") → `429 budget_exhausted`, nothing sent | n/a |
+| HTTP 502/503/504 | one retry after 1 s, then `ModelError` → `502 model_error` | HTTP 503: one retry after 1 s, then `ModelError` |
+| HTTP 403 mentioning the VPN | `ModelError` "only reachable on the VT VPN; connect, or set LLM_PROVIDER=gemini" → `502` | n/a |
+| HTTP 401/403 otherwise | `ModelError` "rejected the API key" → `502` | n/a |
+| HTTP 404 | `ModelError` naming the model id and `LLM_MODEL` | same, naming `GEMINI_MODEL` |
+| Schema refused (400/422 mentioning it) | one fallback to plain `json_object` mode | n/a |
+| Timeout, network error, unreadable, empty, or cut-off answer, other HTTP errors | `ModelError` → `502 model_error` | same |
 
 Error messages stored on the run and returned to the client are generic ("The AI service did not respond in time"); they never include prompt text, tab content, or the vendor's response body.
 
@@ -101,9 +106,13 @@ Error messages stored on the run and returned to the client are generic ("The AI
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `GEMINI_API_KEY` | none | required for live runs; server-side only, never sent to the extension |
-| `GEMINI_MODEL` | `gemini-3.5-flash-lite` | chosen for higher rate limits than the full flash models; verified callable on 2026-09-19. `gemini-2.5-flash` is listed but returns 404 for new users; a listed model is not necessarily callable |
-| `GEMINI_MODEL_CLUSTER` | unset | optional model id used only for clustering; falls back to `GEMINI_MODEL` |
-| `GEMINI_THINKING_LEVEL` | `minimal` | `minimal` \| `low` \| `medium` \| `high`. Made no difference to grouping in the 2026-09-19 probes (about 1.2 s at every level on the lite model) |
+| `LLM_PROVIDER` | `vt` | `vt` (VT ARC LLM API, default) or `gemini` (backup). One is active per deployment; any other value is a configuration error |
+| `VT_LLM_API_KEY` | none | personal VT key (`LLM_API_KEY` also accepted); server-side only. The API works only on the VT Campus VPN |
+| `LLM_BASE_URL` | `https://llm-api.arc.vt.edu/api/v1` | any OpenAI-compatible endpoint |
+| `LLM_MODEL`, `LLM_MODEL_<PURPOSE>` | `gpt-oss-120b-thinking-low` (cluster, plan, command); `gpt-oss-120b` (chat, actions) | VT model id; the purpose-specific variable wins. Effort is part of the id |
+| `LLM_CONCURRENCY` | `8` for gpt-oss-120b (documented limit 10) | local cap on simultaneous requests per model family |
+| `GEMINI_API_KEY` | none | the backup provider's key |
+| `GEMINI_MODEL`, `GEMINI_MODEL_<PURPOSE>` | `gemini-3.5-flash-lite` | verified callable on 2026-09-19. `gemini-2.5-flash` is listed but returns 404 for new users |
+| `GEMINI_THINKING_LEVEL` | `minimal` | `minimal` \| `low` \| `medium` \| `high`; no effect on grouping in the 2026-09-19 probes |
 | `CLUSTER_CONFIDENCE_BAR` | `0.7` | groups at or above it auto-apply |
-| `LLM_DAILY_CAP` | `450` | in-memory cap on model requests per Pacific-time day, shared by all AI features (research §18) |
+| `LLM_DAILY_CAP` | `450` | in-memory cap on model requests per Pacific-time day, shared by all AI features (research section 18) |

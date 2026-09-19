@@ -45,7 +45,7 @@ Errors:
 | `400` | | body is not a JSON object, or `force` is not a boolean |
 | `401` | | missing/unknown token |
 | `409` | `run_in_progress` | this user already has a run in flight |
-| `429` | `budget_exhausted` | the daily AI-call budget is spent, or the AI vendor said its quota is used up; run recorded `failed` (body includes `runId` when a run row exists); nothing changed; not retried |
+| `429` | `budget_exhausted` | the daily AI-call budget is spent, the AI vendor said its quota is used up, or the AI service stayed too busy (its concurrency limit) until the deadline; run recorded `failed` (body includes `runId` when a run row exists); nothing changed; not retried |
 | `502` | `model_error` | the model timed out, refused, or returned something unusable; body includes `runId`; nothing changed |
 | `503` | `model_unconfigured` | no model key configured on the server; no run recorded; nothing changed |
 

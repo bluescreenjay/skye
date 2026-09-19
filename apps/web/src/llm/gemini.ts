@@ -1,59 +1,78 @@
-// The only file that knows about the AI vendor (Google Gemini, REST). A pivot to
-// another provider replaces this file and nothing else (contracts/model.md).
-//
+// The backup provider: Google Gemini over REST (select it with LLM_PROVIDER=gemini).
 // Behavior worth knowing (specs/004-ai-clustering/research.md sections 1, 16, 18):
 //  - every request is counted against the daily budget BEFORE it is sent;
 //  - one total 25 s deadline covers the call and its single retry;
-//  - HTTP 429 is never retried: it means a quota is used up (a minute or a day),
-//    so a retry cannot help and would only spend another request;
+//  - HTTP 429 is never retried: on the free tier it means a quota is used up (15 requests a
+//    minute or 500 a day), so a retry cannot help and would only spend another request;
 //  - HTTP 503 is retried once after about a second, if the deadline allows;
-//  - error messages are fixed and generic: never the prompt, tab text, or the
-//    vendor's response body. Nothing here logs.
-import { spend, type Purpose } from "./budget";
+//  - error messages are fixed and generic: never the prompt, tab text, or the vendor's
+//    response body. Nothing here logs.
+import { spend } from "./budget";
 import { BudgetExceededError, ModelError, ModelUnconfiguredError } from "./errors";
+import { DEADLINE_MS, isAbort, wait, type GenerateJsonOptions } from "./types";
 
 export const DEFAULT_MODEL = "gemini-3.5-flash-lite";
-export const DEADLINE_MS = 25_000;
 const RETRY_DELAY_MS = 1_000;
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 
-export interface GenerateJsonOptions {
-  purpose: Purpose;
-  /** The whole prompt: instructions followed by the data. */
-  prompt: string;
-  /** Response schema in the vendor's OpenAPI-style dialect (uppercase type names). */
-  schema: unknown;
-  signal?: AbortSignal;
-  /** Tests only. */
-  fetchImpl?: typeof fetch;
-  /** Tests only: replaces the 1 s wait before the retry. */
-  sleep?: (ms: number) => Promise<void>;
-}
-
 /** GEMINI_MODEL_<PURPOSE>, else GEMINI_MODEL, else the default. */
-export function modelFor(purpose: Purpose): string {
+export function geminiModelFor(purpose: GenerateJsonOptions["purpose"]): string {
   const specific = process.env[`GEMINI_MODEL_${purpose.toUpperCase()}`]?.trim();
   const general = process.env.GEMINI_MODEL?.trim();
   return specific || general || DEFAULT_MODEL;
 }
 
-/** GEMINI_THINKING_LEVEL (minimal | low | medium | high), default minimal: fastest. Raise it if grouping quality is short. */
+export function geminiApiKey(): string | undefined {
+  return process.env.GEMINI_API_KEY?.trim() || undefined;
+}
+
+/** GEMINI_THINKING_LEVEL (minimal | low | medium | high), default minimal: fastest. */
 export function thinkingLevel(): string {
   return process.env.GEMINI_THINKING_LEVEL?.trim() || "minimal";
 }
 
-const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+/**
+ * Standard JSON Schema -> Gemini's dialect: uppercase type names, `nullable: true` instead
+ * of a `["string", "null"]` type, and no `additionalProperties`. A property that may be
+ * null is also dropped from `required` (strict JSON Schema wants every property required,
+ * Gemini does not). This matters: on 2026-09-19, marking a nullable `emoji` and
+ * `existingWorkspaceId` as required made Gemini leave out a whole group in 3 of 3 runs,
+ * while leaving them optional found it in 3 of 3.
+ */
+export function toGeminiSchema(schema: unknown): unknown {
+  if (Array.isArray(schema)) return schema.map(toGeminiSchema);
+  if (typeof schema !== "object" || schema === null) return schema;
+  const source = schema as Record<string, unknown>;
+  const isNullable = (definition: unknown) => {
+    const type = (definition as { type?: unknown } | null)?.type;
+    return Array.isArray(type) && type.includes("null");
+  };
+  const properties = source.properties as Record<string, unknown> | undefined;
 
-function isAbort(error: unknown): boolean {
-  return error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError");
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(source)) {
+    if (key === "additionalProperties") continue;
+    if (key === "type") {
+      const types = (Array.isArray(value) ? value : [value]).filter((t) => t !== "null") as string[];
+      if (Array.isArray(value) && value.includes("null")) out.nullable = true;
+      out.type = String(types[0] ?? "string").toUpperCase();
+    } else if (key === "properties" && properties) {
+      out.properties = Object.fromEntries(Object.entries(properties).map(([k, v]) => [k, toGeminiSchema(v)]));
+    } else if (key === "required" && Array.isArray(value) && properties) {
+      out.required = value.filter((name) => !isNullable(properties[name as string]));
+    } else {
+      out[key] = key === "items" ? toGeminiSchema(value) : value;
+    }
+  }
+  return out;
 }
 
 /** Sends one request (with at most one retry) and returns the model's answer parsed as JSON. */
-export async function generateJson(options: GenerateJsonOptions): Promise<unknown> {
-  const apiKey = process.env.GEMINI_API_KEY?.trim();
+export async function geminiGenerateJson(options: GenerateJsonOptions): Promise<unknown> {
+  const apiKey = geminiApiKey();
   if (!apiKey) throw new ModelUnconfiguredError();
 
-  const model = modelFor(options.purpose);
+  const model = geminiModelFor(options.purpose);
   const doFetch = options.fetchImpl ?? fetch;
   const sleep = options.sleep ?? wait;
   const deadline = AbortSignal.timeout(DEADLINE_MS);
@@ -64,7 +83,7 @@ export async function generateJson(options: GenerateJsonOptions): Promise<unknow
     generationConfig: {
       temperature: 0.2,
       responseMimeType: "application/json",
-      responseSchema: options.schema,
+      responseSchema: toGeminiSchema(options.schema),
       // thinkingLevel, not thinkingBudget: the lite model rejects thinkingBudget: 0 with HTTP 400.
       thinkingConfig: { thinkingLevel: thinkingLevel() },
     },
@@ -90,8 +109,12 @@ export async function generateJson(options: GenerateJsonOptions): Promise<unknow
 
     if (response.status === 503) {
       if (attempt === 0 && !signal.aborted) {
-        await sleep(RETRY_DELAY_MS);
-        if (!signal.aborted) continue;
+        try {
+          await sleep(RETRY_DELAY_MS, signal);
+          continue;
+        } catch {
+          throw new ModelError("The AI service did not respond in time.");
+        }
       }
       throw new ModelError("The AI service is temporarily unavailable.");
     }

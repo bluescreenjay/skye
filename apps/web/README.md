@@ -48,14 +48,17 @@ If `next dev` or `next build` has left files named like `cache-life.d 2.ts` in `
 
 ## Clustering (feature 004)
 
-`POST /api/cluster/runs` groups a user's unplaced tabs into named workspaces with Gemini. It runs **only when asked** (never on tab events). A group the model is confident about (default 0.7) is applied; a less confident one becomes a suggestion. Every AI placement is marked `ai`, recorded per run, and can be undone; a tab the user placed is never moved. Design: `specs/004-ai-clustering/`.
+`POST /api/cluster/runs` groups a user's unplaced tabs into named workspaces with an LLM. It runs **only when asked** (never on tab events). A group the model is confident about (default 0.7) is applied; a less confident one becomes a suggestion. Every AI placement is marked `ai`, recorded per run, and can be undone; a tab the user placed is never moved. Design: `specs/004-ai-clustering/`.
 
-Configure in the repo-root `.env` (see `.env.example`):
+Configure in the repo-root `.env` (see `.env.example`). One AI provider is active per deployment; switching is only config:
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `GEMINI_API_KEY` | none | required; server-side only |
-| `GEMINI_MODEL` | `gemini-3.5-flash-lite` | model id; `GEMINI_MODEL_CLUSTER` overrides it for clustering only |
+| `LLM_PROVIDER` | `vt` | `vt` = Virginia Tech ARC LLM API (default); `gemini` = Google Gemini (backup, works from any network) |
+| `VT_LLM_API_KEY` | none | your personal VT key. **The VT API works only on the VT Campus VPN**; off it every call fails with a message saying so |
+| `LLM_MODEL`, `LLM_MODEL_CLUSTER`, ... | `gpt-oss-120b-thinking-low` (clustering, plans, commands), `gpt-oss-120b` (chat, actions) | VT model ids; effort is part of the id |
+| `LLM_CONCURRENCY` | `8` for gpt-oss-120b | local cap on simultaneous requests (the service allows 10 and rejects the rest) |
+| `GEMINI_API_KEY`, `GEMINI_MODEL` | none, `gemini-3.5-flash-lite` | the backup provider (free tier: 15 requests a minute) |
 | `CLUSTER_CONFIDENCE_BAR` | `0.7` | at or above it a group is applied, below it suggested |
 | `LLM_DAILY_CAP` | `450` | in-memory guardrail on model requests per Pacific-time day |
 
@@ -65,9 +68,10 @@ The tables and the `tab_refs.placement_source` column come from `packages/shared
 node apps/web/scripts/apply-sql.mjs packages/shared/sql/004_clustering.sql   # writes to the database in DATABASE_URL
 ```
 
-Automated tests use a fake model and never call Gemini. An opt-in check calls the real API (about 2 requests) against an in-process database, never the one in `.env`:
+Automated tests use a fake model and never call a real provider. An opt-in check calls the active provider for real (about 2 requests; on the VT provider you must be on the VPN) against an in-process database, never the one in `.env`:
 
 ```bash
-CLUSTER_LIVE=1 pnpm --filter @ai-browser/web test cluster-live
+CLUSTER_LIVE=1 pnpm --filter @ai-browser/web test cluster-live                       # the default (vt) provider
+LLM_PROVIDER=gemini CLUSTER_LIVE=1 pnpm --filter @ai-browser/web test cluster-live   # the backup
 node apps/web/scripts/score-clusters.mjs <deviceToken>   # SC-001 score for a user's tabs after a run
 ```

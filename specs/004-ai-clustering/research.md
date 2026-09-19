@@ -4,6 +4,8 @@ Decisions that turn the spec into a buildable design. Nothing here is a `NEEDS C
 
 ## 1. How the model is called
 
+> **Updated 2026-09-19:** this section describes the Gemini call. The default provider is now the VT ARC LLM API, with Gemini as the selectable backup: see section 19. The adapter idea, the data sent (section 2), and the validation (section 4) are unchanged.
+
 - **Decision**: One adapter, `ClusterModel.propose(input)`, with a Gemini implementation that calls the Gemini REST `generateContent` method through `fetch` (API key in the `x-goog-api-key` header, model id from `GEMINI_MODEL`). No SDK dependency.
 - **Where it lives**: the vendor call is in the shared `apps/web/src/llm/gemini.ts` (with `errors.ts` and `budget.ts`), not under `cluster/`, because features 008–011 make model calls too (see §18). `cluster/model.ts` is the thin, clustering-specific layer on top.
 - **Rationale**: The constitution wants vendor calls behind a small adapter so a pivot is "config plus one module". REST through `fetch` adds no dependency, is trivial to fake in tests, and keeps the timeout under our control (`AbortSignal.timeout`).
@@ -116,6 +118,8 @@ Decisions that turn the spec into a buildable design. Nothing here is a `NEEDS C
 
 ## 16. Failure behavior
 
+> The rules below are Gemini's. The VT provider differs (a busy service is retried, not failed): see section 19.
+
 - **Decision**:
   - No `GEMINI_API_KEY`: `503 model_unconfigured`, no run recorded.
   - Daily AI-call budget spent (our own meter, §18) **or** an HTTP 429 from Google: `BudgetExceededError` → `429 budget_exhausted`. A 429 is **never retried** (a per-minute limit lasts a minute and a per-day limit lasts a day, so a retry cannot help and only spends another request). The run row is stored `failed` with a generic message.
@@ -150,6 +154,33 @@ Decisions that turn the spec into a buildable design. Nothing here is a `NEEDS C
 - **Not done**: creating extra Google projects or keys to multiply quota (against Google's terms); a second vendor as an automatic fallback (the constitution forbids running the preferred vendor and its pivot as two sources); a persistent usage table (a migration and a query per call for no gain in a one-server demo; revisit if the app is hosted for real users).
 - **Demo-day practice**: run clustering ahead of time on the demo tab set. Results are stored, so showing them costs no calls, and repeating the click is skipped as "unchanged".
 - **Alternatives considered**: a database-backed counter (extra migration, a query per call); no meter at all (one runaway loop empties the day, which is the failure this section exists to prevent).
+
+## 19. Provider: the VT ARC LLM API (default) and Gemini (backup)
+
+- **Decision** (user decision, 2026-09-19): the default AI provider is the Virginia Tech ARC LLM API (`https://llm-api.arc.vt.edu/api/v1`, OpenAI-compatible, on-premises). The models are `gpt-oss-120b-thinking-low` for structured work (clustering, plans, command routing) and `gpt-oss-120b` for chat and actions. Gemini stays implemented and is selected with `LLM_PROVIDER=gemini`. **Exactly one provider is active per deployment**; there is no automatic failover. Code: `apps/web/src/llm/index.ts` (dispatcher), `openai-compat.ts` (VT), `gemini.ts` (backup), `limiter.ts`.
+- **Why** (the constitution's pivot rule: quotas made the preferred vendor a bottleneck): the Gemini free tier is 15 requests a minute and 500 a day, shared with a teammate and demo viewers. The VT API documents no per-minute or per-day request cap, only per-model concurrency (gpt-oss-120b and DeepSeek-V4.1-Flash 10, GLM-5.3 4, Kimi-K3 3).
+- **Evidence** (the app's own 30-tab prompt, bar 0.7, two runs each, scored with `apps/web/scripts/score-lib.mjs`):
+
+  | Model | Score | Latency |
+  | --- | --- | --- |
+  | `gpt-oss-120b-thinking-low` | 100%, 100% | 5.0 to 5.2 s (50 tabs: 4.8 to 6.3 s; one of three 50-tab runs scored 84%) |
+  | `gpt-oss-120b` | 100%, 100% | 8.4 to 8.7 s |
+  | `Kimi-K3-thinking-low` | 100%, 100% | 9 to 15 s |
+  | `GLM-5.3-thinking-high` | 100%, 100% | 15 to 17 s |
+  | `DeepSeek-V4.1-Flash-thinking-low` | 100%, 100% | 44 to 51 s |
+  | `DeepSeek-V4.1-Flash` | 65%, 100% | 82 to 87 s |
+  | Gemini `gemini-3.5-flash-lite` (backup) | 100% | about 1.3 s |
+
+  Through the finished code: VT default, 30 tabs 100% in 4.1 s and 50 tabs in 5.2 s; Gemini backup, 100% in 1.4 s. The VT gpt-oss models reported the hard-to-group coding set at 0.72 to 0.92, against Gemini lite's borderline 0.70.
+- **What the VT API does that the code accounts for** (probed 2026-09-19):
+  - **VPN only.** Off the VT Campus VPN every call is HTTP 403 "restricted to the VT Campus VPN". The provider turns that into a fixed message naming the fix (connect, or `LLM_PROVIDER=gemini`); it is a `502 model_error` with nothing changed.
+  - **Concurrency is enforced by rejection, not queueing:** the 11th simultaneous request to gpt-oss-120b got HTTP **400** `{"detail":"concurrent session limit reached"}` (not a 429, no `Retry-After`). This is transient, so the provider **retries it with backoff** (0.5 s, 1 s, 2 s, ..., up to 6 attempts within the 25 s deadline; `error.retry_after_s` is honored on a 429). This is the opposite of Gemini, where a 429 means a quota is used up and is never retried. A run that stays refused ends as `429 budget_exhausted` ("busy, try again in a moment") with nothing changed.
+  - **A local limiter** (`limiter.ts`) keeps us under the limit in the first place: per model family (`-thinking-low` and the base model share one pool of 10, measured), documented limit minus headroom (8 for gpt-oss-120b, 8 for DeepSeek, 3 for GLM, 2 for Kimi, 4 for unknown models), `LLM_CONCURRENCY` overrides. A caller waits for a slot but never past its deadline.
+  - **Structured output:** without `response_format` the model wraps JSON in a code fence. The provider sends strict `json_schema` (falling back once to `json_object` if the schema is refused) and also strips a fence defensively.
+  - **Effort is part of the model id**, and reasoning arrives in a separate field that is ignored. Non-streaming requests are capped at 8,000 tokens by the service; we ask for 4,000.
+- **One canonical schema, translated per provider.** `cluster/model.ts` holds a standard JSON Schema (strict-friendly: every property required, `additionalProperties: false`, nullable as a type array). The Gemini provider translates it to Gemini's dialect. **Lesson recorded:** the first translation kept every property required, and Gemini then left out a whole group in 3 of 3 runs; dropping the *nullable* properties from `required` (which is how Gemini's schema was originally written) found it 3 of 3. `toGeminiSchema` now does that on purpose.
+- **Alternatives considered**: automatic failover from VT to Gemini when VT fails (not built: it would send tab content to a third party the user chose not to use, and it runs two providers at once, which the constitution discourages; a VPN drop on demo day is instead a one-line switch); DeepSeek-V4.1-Flash for long pages (44 to 87 s on a small prompt); Kimi-K3 and GLM-5.3 as workhorses (3 and 4 slots); embeddings (out of scope, P1).
+- **Risks and constraints**: the VT service is for VT students, faculty, and staff with a personal key ("sharing API keys is strictly prohibited"), so a teammate needs their own key or `LLM_PROVIDER=gemini`, and whether demo viewers may use the app through your key is a question for ARC; VT logs and retains all interactions; a hosted deployment (Vultr and similar) cannot reach the VPN-only endpoint; the daily meter (section 18) remains as a runaway guard (`LLM_DAILY_CAP`, sized for Gemini's 500).
 
 ## Clarifications
 
