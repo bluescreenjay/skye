@@ -1,5 +1,5 @@
 -- AI Browser 001 schema skeleton
--- Implemented at: packages/shared/sql/001_init.sql (keep the two in sync)
+-- Source: specs/001-shared-domain-model/contracts/001_init.sql
 -- Preferred: Tiger Data / Timescale Postgres
 -- Pivot: Supabase / plain Postgres. Skip the create_hypertable call below;
 --        tab_events stays a regular table.

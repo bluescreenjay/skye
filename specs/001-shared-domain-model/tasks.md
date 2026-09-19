@@ -28,10 +28,10 @@ Monorepo per plan.md: `apps/extension/`, `apps/web/`, `packages/shared/`
 
 **Purpose**: Root workspace so packages can be added
 
-- [ ] T001 Create pnpm workspace root in `pnpm-workspace.yaml` with `apps/*` and `packages/*`
-- [ ] T002 Create root `package.json` with `packageManager` pnpm, `private: true`, and scripts `typecheck` (`pnpm -r typecheck`) and `build` (`pnpm -r build`)
-- [ ] T003 Create `.gitignore` ignoring `node_modules/`, `dist/`, `.env`, `.env.local`, `apps/*/.env*`, and `.DS_Store`
-- [ ] T004 [P] Create root `tsconfig.base.json` with `strict: true`, `moduleResolution` bundler-friendly, and `target` ES2022
+- [X] T001 Create pnpm workspace root in `pnpm-workspace.yaml` with `apps/*` and `packages/*`
+- [X] T002 Create root `package.json` with `packageManager` pnpm, `private: true`, and scripts `typecheck` (`pnpm -r typecheck`) and `build` (`pnpm -r build`)
+- [X] T003 Create `.gitignore` ignoring `node_modules/`, `dist/`, `.env`, `.env.local`, `apps/*/.env*`, and `.DS_Store`
+- [X] T004 [P] Create root `tsconfig.base.json` with `strict: true`, `moduleResolution` bundler-friendly, and `target` ES2022
 
 ---
 
@@ -41,9 +41,9 @@ Monorepo per plan.md: `apps/extension/`, `apps/web/`, `packages/shared/`
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Create `packages/shared/package.json` named `@ai-browser/shared` with `main`/`types` pointing at `src/index.ts` (or `dist` after build) and scripts `typecheck` (`tsc --noEmit`) and `build`
-- [ ] T006 Create `packages/shared/tsconfig.json` extending `../../tsconfig.base.json` with `rootDir` `src` and include `src/**/*`
-- [ ] T007 Create placeholder `packages/shared/src/index.ts` that will re-export domain types (empty export is OK until T009)
+- [X] T005 Create `packages/shared/package.json` named `@ai-browser/shared` with `main`/`types` pointing at `src/index.ts` (or `dist` after build) and scripts `typecheck` (`tsc --noEmit`) and `build`
+- [X] T006 Create `packages/shared/tsconfig.json` extending `../../tsconfig.base.json` with `rootDir` `src` and include `src/**/*`
+- [X] T007 Create placeholder `packages/shared/src/index.ts` that will re-export domain types (empty export is OK until T009)
 
 **Checkpoint**: Foundation ready — `packages/shared` exists and is listed in the pnpm workspace
 
@@ -57,10 +57,10 @@ Monorepo per plan.md: `apps/extension/`, `apps/web/`, `packages/shared/`
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Add union types `WorkspaceStatus`, `TabEventType`, `MessageRole`, and `ActionRunStatus` in `packages/shared/src/domain.ts` matching `specs/001-shared-domain-model/data-model.md`
-- [ ] T009 [US1] Add interfaces `User`, `Workspace`, `TabRef`, `TabEvent`, `PlanItem`, `Message`, `ActionRun`, and `Correction` in `packages/shared/src/domain.ts` matching `specs/001-shared-domain-model/contracts/shared-types.md` (`userId` on every durable non-User entity; `TabRef.workspaceId` nullable)
-- [ ] T010 [US1] Re-export all domain types from `packages/shared/src/index.ts`
-- [ ] T011 [US1] Run `pnpm --filter @ai-browser/shared typecheck` and fix until it passes
+- [X] T008 [US1] Add union types `WorkspaceStatus`, `TabEventType`, `MessageRole`, and `ActionRunStatus` in `packages/shared/src/domain.ts` matching `specs/001-shared-domain-model/data-model.md`
+- [X] T009 [US1] Add interfaces `User`, `Workspace`, `TabRef`, `TabEvent`, `PlanItem`, `Message`, `ActionRun`, and `Correction` in `packages/shared/src/domain.ts` matching `specs/001-shared-domain-model/contracts/shared-types.md` (`userId` on every durable non-User entity; `TabRef.workspaceId` nullable)
+- [X] T010 [US1] Re-export all domain types from `packages/shared/src/index.ts`
+- [X] T011 [US1] Run `pnpm --filter @ai-browser/shared typecheck` and fix until it passes
 
 **Checkpoint**: Shared model is the single source of truth. No product UI.
 
@@ -74,9 +74,9 @@ Monorepo per plan.md: `apps/extension/`, `apps/web/`, `packages/shared/`
 
 ### Implementation for User Story 2
 
-- [ ] T012 [US2] Copy and adapt `specs/001-shared-domain-model/contracts/001_init.sql` to `packages/shared/sql/001_init.sql` (users, workspaces, tab_refs, tab_events, plan_items, messages, action_runs, corrections)
-- [ ] T013 [US2] Keep `SELECT create_hypertable('tab_events', 'time', if_not_exists => TRUE);` commented with a Tiger vs Postgres-pivot note in `packages/shared/sql/001_init.sql`
-- [ ] T014 [US2] Add a one-line pointer from `packages/shared/src/index.ts` or `packages/shared/README.md` to `packages/shared/sql/001_init.sql` so the schema is findable next to the types
+- [X] T012 [US2] Copy and adapt `specs/001-shared-domain-model/contracts/001_init.sql` to `packages/shared/sql/001_init.sql` (users, workspaces, tab_refs, tab_events, plan_items, messages, action_runs, corrections)
+- [X] T013 [US2] Keep `SELECT create_hypertable('tab_events', 'time', if_not_exists => TRUE);` commented with a Tiger vs Postgres-pivot note in `packages/shared/sql/001_init.sql`
+- [X] T014 [US2] Add a one-line pointer from `packages/shared/src/index.ts` or `packages/shared/README.md` to `packages/shared/sql/001_init.sql` so the schema is findable next to the types
 
 **Checkpoint**: Durable workspace + Other + tab events exist on disk. Do not apply migrations as a required step (003 will use the DB).
 
@@ -90,8 +90,8 @@ Monorepo per plan.md: `apps/extension/`, `apps/web/`, `packages/shared/`
 
 ### Implementation for User Story 3
 
-- [ ] T015 [US3] Create `.env.example` at repo root with `DATABASE_URL=`, `GEMINI_API_KEY=`, `ELEVENLABS_API_KEY=`, and `DEVICE_TOKEN_SECRET=` plus comments for Tiger vs Supabase and Gemini vs Claude/GPT pivots per `specs/001-shared-domain-model/contracts/env.md`
-- [ ] T016 [US3] Confirm `.gitignore` (T003) lists `.env` and `.env.local`; add them if missing
+- [X] T015 [US3] Create `.env.example` at repo root with `DATABASE_URL=`, `GEMINI_API_KEY=`, `ELEVENLABS_API_KEY=`, and `DEVICE_TOKEN_SECRET=` plus comments for Tiger vs Supabase and Gemini vs Claude/GPT pivots per `specs/001-shared-domain-model/contracts/env.md`
+- [X] T016 [US3] Confirm `.gitignore` (T003) lists `.env` and `.env.local`; add them if missing
 
 **Checkpoint**: Developers know where credentials will go; git stays clean.
 
@@ -105,13 +105,13 @@ Monorepo per plan.md: `apps/extension/`, `apps/web/`, `packages/shared/`
 
 ### Implementation for User Story 4
 
-- [ ] T017 [P] [US4] Create `apps/web/package.json` (Next.js App Router, TypeScript, dependency `@ai-browser/shared: workspace:*`) and `apps/web/tsconfig.json`
-- [ ] T018 [P] [US4] Create `apps/extension/package.json` (Vite + CRXJS or equivalent MV3 stub, TypeScript, dependency `@ai-browser/shared: workspace:*`) and `apps/extension/tsconfig.json`
-- [ ] T019 [US4] Add Next.js placeholder `apps/web/app/page.tsx` that is **not** product Home (simple “API shell” text) and `apps/web/app/layout.tsx` as required by App Router
-- [ ] T020 [US4] Add MV3 stub `apps/extension/src/background.ts` and `apps/extension/manifest.config.ts` (or `manifest.json`) with a background service worker only — no `chrome_url_overrides` newtab and no `side_panel`
-- [ ] T021 [US4] Add `apps/web/src/domain-check.ts` (or import inside `apps/web/app/page.tsx`) that imports `Workspace`, `TabRef`, and `TabEvent` from `@ai-browser/shared`
-- [ ] T022 [US4] Add `apps/extension/src/domain-check.ts` that imports `Workspace`, `TabRef`, and `TabEvent` from `@ai-browser/shared`
-- [ ] T023 [US4] Wire workspace protocol in both app `package.json` files and run `pnpm install` then `pnpm -r typecheck` until both apps compile
+- [X] T017 [P] [US4] Create `apps/web/package.json` (Next.js App Router, TypeScript, dependency `@ai-browser/shared: workspace:*`) and `apps/web/tsconfig.json`
+- [X] T018 [P] [US4] Create `apps/extension/package.json` (Vite + CRXJS or equivalent MV3 stub, TypeScript, dependency `@ai-browser/shared: workspace:*`) and `apps/extension/tsconfig.json`
+- [X] T019 [US4] Add Next.js placeholder `apps/web/app/page.tsx` that is **not** product Home (simple “API shell” text) and `apps/web/app/layout.tsx` as required by App Router
+- [X] T020 [US4] Add MV3 stub `apps/extension/src/background.ts` and `apps/extension/manifest.config.ts` (or `manifest.json`) with a background service worker only — no `chrome_url_overrides` newtab and no `side_panel`
+- [X] T021 [US4] Add `apps/web/src/domain-check.ts` (or import inside `apps/web/app/page.tsx`) that imports `Workspace`, `TabRef`, and `TabEvent` from `@ai-browser/shared`
+- [X] T022 [US4] Add `apps/extension/src/domain-check.ts` that imports `Workspace`, `TabRef`, and `TabEvent` from `@ai-browser/shared`
+- [X] T023 [US4] Wire workspace protocol in both app `package.json` files and run `pnpm install` then `pnpm -r typecheck` until both apps compile
 
 **Checkpoint**: Three-part repo: extension, web, shared. No user-facing workspace UI.
 
@@ -121,11 +121,11 @@ Monorepo per plan.md: `apps/extension/`, `apps/web/`, `packages/shared/`
 
 **Purpose**: Match quickstart.md and keep secrets out
 
-- [ ] T024 Add `packages/shared/README.md` describing the eight entities and pointing at `sql/001_init.sql`
-- [ ] T025 [P] Add short `apps/web/README.md` and `apps/extension/README.md` stating UI/ingest land in later features
-- [ ] T026 Align root scripts with `specs/001-shared-domain-model/quickstart.md` (`pnpm install`, `pnpm -r typecheck`)
-- [ ] T027 Run the quickstart validation in `specs/001-shared-domain-model/quickstart.md` and fix failures
-- [ ] T028 Grep the repo to confirm no live API keys and that Home/Side Panel/clustering were not added
+- [X] T024 Add `packages/shared/README.md` describing the eight entities and pointing at `sql/001_init.sql`
+- [X] T025 [P] Add short `apps/web/README.md` and `apps/extension/README.md` stating UI/ingest land in later features
+- [X] T026 Align root scripts with `specs/001-shared-domain-model/quickstart.md` (`pnpm install`, `pnpm -r typecheck`)
+- [X] T027 Run the quickstart validation in `specs/001-shared-domain-model/quickstart.md` and fix failures
+- [X] T028 Grep the repo to confirm no live API keys and that Home/Side Panel/clustering were not added
 
 ---
 

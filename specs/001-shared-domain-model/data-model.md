@@ -141,7 +141,7 @@ User 1──* Workspace 1──* PlanItem
 
 ## Integrity rules (enforce in SQL)
 
-1. Child `user_id` matches parent workspace `user_id` (trigger or composite FK).
+1. Child `user_id` matches the parent's `user_id`, enforced with composite FKs: onto `workspaces (id, user_id)` for `tab_refs`, `plan_items`, `messages`, and `action_runs`; onto `tab_refs (id, user_id)` for `tab_events.tab_ref_id` and `corrections.tab_ref_id`. Workspace ids on `tab_events` and `corrections` (`from`/`to`) are history snapshots and deliberately have no FK.
 2. No durable row without `user_id`.
 3. Deleting a user cascades (dev convenience) or restricts (prod later); 001 may `ON DELETE CASCADE` for simplicity.
 4. Workspace delete: tab_refs set `workspace_id` NULL (become Other) rather than destroying history; events remain.
