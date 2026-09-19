@@ -294,30 +294,31 @@ Add a fixed list of workspace agents to each expanded card on Home, laid out as 
 
 ### 010b — MCP + local action tools (stretch)
 
-**Stretch** — full entry lives under [Stretch → 010b](#010b--mcp--local-action-tools) below. Depends on 010; does not gate the MVP cut line. Full tool catalog on the server; UI shows a **dynamic, agent-picked** subset as action buttons (not every tool all the time).
+**Stretch** — full entry lives under [Stretch → 010b](#010b--mcp--local-action-tools) below. Depends on 010; does not gate the MVP cut line. Full tool catalog on the server; UI shows a **dynamic, agent-picked** subset as action buttons (not every tool all the time). After 010b ships, ⌘K (011) MAY optionally route confirmed tool intents into that catalog; **011 MVP must not depend on 010b**.
 
 ---
 
 ### 011 — Global command bar
 
-**What:** Natural-language control for browser/workspace operations (⌘K), Gemini-routed.
+**What:** Natural-language control for browser/workspace operations (⌘K), Gemini-routed. An **intent router** — not a second chat product and not an unconstrained agent.
 
 **In scope**
 - Available from **Home** and while browsing (extension command overlay / sidebar)
-- Commands such as: organize my tabs, put X together, create a workspace for these, clean up, show Home / active workspaces
+- Browser/workspace commands such as: organize my tabs, put X together, create a workspace for these, clean up, show Home / active workspaces
 - “What was I working on yesterday?” using Tiger continuous aggregates over tab_events
-- Routes intents to clustering, persistence, and navigation—not a second chat product
+- Routes intents to clustering, persistence, navigation, and the **fixed 010 workspace-agent catalog** (e.g. “summarize this workspace”, “next steps for Hackathon”) via the same agent/run APIs as the Home card — not a parallel agent system
+- Routes intents only; does not invent custom multi-step agents
 
-**Out of scope:** Arbitrary web automation, shopping checkout, voice (013)
+**Out of scope:** Arbitrary web automation, shopping checkout, voice (013); **010b** MCP / SaaS tools and silent tool loops (those may plug into ⌘K later as optional stretch — see 010b)
 
-**Depends on:** 004, 005, 005b, 006, 007  
+**Depends on:** 004, 005, 005b, 006, 007, **010**  
 **Unblocks:** MVP complete
 
-**Done when:** User can trigger organize/create/cleanup via natural language and see Home and the sidebar update.
+**Done when:** User can trigger organize/create/cleanup via natural language and see Home and the sidebar update, and can run at least one 010 agent (e.g. summarize) for the current or named workspace from ⌘K with the result saved like a Home agent run.
 
 **Specify prompt**
 ```text
-Add a global AI command bar (⌘K) as the natural-language control layer for AI Browser, powered by Gemini. It should work from Home and while a web page is open (extension overlay and/or sidebar). Users should be able to say things like organize my tabs, put related shopping/travel tabs together, create a workspace for these tabs, clean up my browser, show my workspaces, or what was I working on yesterday (using stored tab activity over time). Feature 005b already offers a one-click organize on Home via POST /api/cluster/runs; the command bar generalizes that and other intents—it is not a separate unconstrained agent. Voice input is a later feature.
+Add a global AI command bar (⌘K) as the natural-language control layer for AI Browser, powered by Gemini. It should work from Home and while a web page is open (extension overlay and/or sidebar). Users should be able to say things like organize my tabs, put related shopping/travel tabs together, create a workspace for these tabs, clean up my browser, show my workspaces, or what was I working on yesterday (using stored tab activity over time). Feature 005b already offers a one-click organize on Home via POST /api/cluster/runs; the command bar generalizes that and other intents. It MUST also route workspace-agent intents to the fixed 010 catalog (summarize, compare, what's missing, next steps, collect refs) using the same server agent/run paths as the Home card—not a second agent stack. It is not a separate unconstrained agent. MCP / 010b SaaS tools are out of scope for this feature (optional later). Voice input is a later feature.
 ```
 
 ---
@@ -411,7 +412,7 @@ Add desktop workspace voice using ElevenLabs in the Chrome sidebar. Users should
 **Out of scope:** showing the entire tool catalog as a permanent button grid; computer-use / mouse agents; arbitrary user-added MCP servers in the UI; Pinterest, Spotify, Figma, Miro, Gmail (unless a leftover hour after the five); filesystem MCP on a remote host; replacing VT ARC; unbounded autonomous agents that run tools without a click; making MCP required for 010’s five one-shot agents
 
 **Depends on:** 010 (agent UI + ActionRun + safe page fetch), 008 (shared LLM), 002/003 (tabs + persistence); extension hooks for open-tab / download intents  
-**Unblocks:** richer demo actions; optional command-bar shortcuts in 011 later
+**Unblocks:** richer demo actions on Home/sidebar; optional ⌘K (011) shortcuts into the same tool registry **after** both 010b and 011 exist — does not change 011’s MVP depends (010 only)
 
 **Done when:** On an expanded Home card, the product shows a short, context-specific set of action buttons (not the full catalog). Those buttons can (1) write/export a summary (md + PDF), (2) open related tabs and Google searches in Chrome, and (3) with credentials configured, push or create something real in each of GitHub, Notion, Slack, Jira, and Drive when suggested—each run saved and visible after reload. Changing workspace context (or refresh) changes which buttons appear. All catalog tools exist behind the registry and are covered by fake-executor tests.
 
@@ -460,8 +461,9 @@ Add a mobile companion that is a remote interface to the same persistent workspa
  │   │       └─ 007 correction (Home drag + sidebar move-this-tab)
  │   └─ 006 Sidebar (in-tab workspace)
  │       ├─ 008 chat ─ 010 agents (Home card first; 009 plan cut, folded into 010)
- │       │              └─ 010b MCP + local tools (stretch; after 010)
- │       └─ 011 command bar (Home + browsing; generalizes 005b)
+ │       │              ├─ 010b MCP + local tools (stretch; after 010; optional ⌘K later)
+ │       │              └─ 011 command bar (Home + browsing; generalizes 005b + runs 010 agents)
+ │       └─ (011 also depends on 004–007 for organize / navigate intents)
  └─ (after MVP) 012 → 013 ElevenLabs → 014 mobile
 ```
 

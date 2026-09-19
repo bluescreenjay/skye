@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+<head><title>Configuration reference | Widget Docs</title></head>
+<body>
+  <nav class="sidebar">
+    <ul>
+      <li>SIDEBAR-INTRO</li><li>SIDEBAR-INSTALL</li><li>SIDEBAR-CONFIG</li><li>SIDEBAR-PLUGINS</li>
+      <li>SIDEBAR-API</li><li>SIDEBAR-CLI</li><li>SIDEBAR-FAQ</li><li>SIDEBAR-CHANGELOG</li>
+    </ul>
+  </nav>
+  <main>
+    <h1>Configuration reference</h1>
+    <p>Widget reads its settings from a file named <code>widget.config.json</code> in the project root. Every key is
+       optional; anything you leave out falls back to the default shown below.</p>
+    <h2>timeout</h2>
+    <p>How long, in milliseconds, a request may take before it is cancelled. The default is 8000. Values below 100 are
+       rejected when the file is loaded.</p>
+    <h2>retries</h2>
+    <p>How many times a failed request is tried again. Retries use exponential backoff starting at 250 milliseconds.</p>
+    <pre>{ "timeout": 8000, "retries": 2 }</pre>
+  </main>
+  <footer>DOCS-FOOTER-TEXT Built with Widget Docs.</footer>
+</body>
+</html>
