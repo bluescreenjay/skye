@@ -66,7 +66,8 @@ describe("choosing the provider (LLM_PROVIDER)", () => {
 
   it("picks the model id from the active provider's own settings", () => {
     expect(modelFor("cluster")).toBe("gpt-oss-120b-thinking-low");
-    expect(modelFor("chat")).toBe("gpt-oss-120b");
+    expect(modelFor("chat")).toBe("gpt-oss-120b-thinking-low");
+    expect(modelFor("actions")).toBe("gpt-oss-120b");
     process.env.LLM_MODEL_CLUSTER = "custom-vt";
     expect(modelFor("cluster")).toBe("custom-vt");
     process.env.LLM_PROVIDER = "gemini";

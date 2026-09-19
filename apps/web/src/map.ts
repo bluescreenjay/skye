@@ -1,5 +1,6 @@
 import type {
   ClusterRun,
+  Message,
   PlacementSource,
   Suggestion,
   TabEvent,
@@ -56,6 +57,18 @@ export type DbTabEvent = {
   event_type: TabEvent["eventType"];
 };
 
+export type DbMessage = {
+  id: string;
+  user_id: string;
+  workspace_id: string;
+  role: Message["role"];
+  content: string;
+  created_at: Date | string;
+};
+
+/** The messages columns that map to a Message. Use it in every SELECT/RETURNING that feeds mapMessage. */
+export const MESSAGE_COLUMNS = "id, user_id, workspace_id, role, content, created_at";
+
 export function mapUser(row: DbUser): User {
   return {
     id: row.id,
@@ -87,6 +100,17 @@ export function mapTabRef(row: DbTabRef): TabRef {
     chromeTabId: row.chrome_tab_id,
     lastSeenAt: iso(row.last_seen_at),
     placementSource: row.placement_source ?? null,
+  };
+}
+
+export function mapMessage(row: DbMessage): Message {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    workspaceId: row.workspace_id,
+    role: row.role,
+    content: row.content,
+    createdAt: iso(row.created_at),
   };
 }
 

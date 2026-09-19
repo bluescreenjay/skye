@@ -24,7 +24,7 @@ Headers: `content-type: text/event-stream; charset=utf-8`, `cache-control: no-ca
 
 ```text
 event: meta
-data: {"userMessage":{...Message},"context":{"tabsIncluded":9,"tabsTotal":9,"planItemsIncluded":0,"messagesIncluded":1}}
+data: {"userMessage":{...Message},"contextInfo":{"tabsIncluded":9,"tabsTotal":9,"planItemsIncluded":0,"messagesIncluded":1}}
 
 event: delta
 data: {"text":"You've opened nine tabs"}
@@ -40,14 +40,14 @@ data: {"assistantMessage":{...Message}}
 
 ```text
 event: error
-data: {"code":"model_error","message":"The answer was interrupted. Your message is saved; retry to get a full answer."}
+data: {"code":"interrupted","message":"The answer was interrupted. Your message is saved; retry to get a full answer."}
 ```
 
-An `error` event means text had already started, and **no assistant message was saved**. Codes there: `model_error`, `budget_exhausted` (never after start in practice), `interrupted`.
+An `error` event means text had already started, and **no assistant message was saved**. Its code is always `interrupted`: any failure after the first piece (a dropped connection, a service error, the 90 s cap) ends the reply the same way, and the user retries.
 
 ### Success, one body (`stream: false`): `200 application/json`
 
-`ChatReply`: `{ "userMessage": Message, "assistantMessage": Message, "context": ChatContextInfo }`.
+`ChatReply`: `{ "userMessage": Message, "assistantMessage": Message, "contextInfo": ChatContextInfo }`.
 
 ### Errors (JSON, before any streamed text)
 
@@ -88,7 +88,7 @@ Response `200`: `ChatHistoryPage`:
 ## Rules for clients (feature 006 and later)
 
 1. **Render replies as plain text or sanitized markdown. Never auto-load remote images, links, or embeds from a reply.** A page's text can try to make the assistant output an image whose address carries data; that only works if the client fetches it.
-2. Show `context` ("based on 9 of 9 tabs") so people know what the answer covers, especially when `tabsIncluded` is less than `tabsTotal`.
+2. Show `contextInfo` ("based on 9 of 9 tabs") so people know what the answer covers, especially when `tabsIncluded` is less than `tabsTotal`.
 3. Send one message at a time per workspace and respect `replying`.
 4. Treat an `error` event as "no reply was saved": offer Retry (`{ "retry": true }`), never re-send the text.
 5. Read the stream with `fetch` and a stream reader, not `EventSource` (it cannot send the `Authorization` header).

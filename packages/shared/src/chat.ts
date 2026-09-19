@@ -1,8 +1,8 @@
-# Contract: Shared chat types
-
-New file `packages/shared/src/chat.ts`, re-exported from `packages/shared/src/index.ts`. The web app and every client (the sidebar in feature 006) import these; nobody redeclares them (constitution principle V). `Message` and `MessageRole` already exist in `domain.ts` and are **not changed**. IDs are UUID strings; times are UTC ISO-8601 strings.
-
-```ts
+// Response shapes for workspace chat (feature 008). The web app builds these; the sidebar
+// (feature 006) imports them from `@ai-browser/shared` and must not redeclare them.
+// Contract: specs/008-workspace-ai-chat/contracts/shared-chat-types.md
+// `Message` and `MessageRole` are unchanged and live in domain.ts.
+// IDs are UUID strings; times are UTC ISO-8601 strings.
 import type { Message } from "./domain";
 
 /** What the model was given for one message (FR-004: the caller is told what the answer is based on). */
@@ -32,13 +32,6 @@ export interface ChatHistoryPage {
   unansweredMessageId: string | null;
 }
 
-/** The events of a streamed reply, in order. `meta` first, then `delta`s, then exactly one of `done` or `error`. */
-export type ChatStreamEvent =
-  | { event: "meta"; data: { userMessage: Message; contextInfo: ChatContextInfo } }
-  | { event: "delta"; data: { text: string } }
-  | { event: "done"; data: { assistantMessage: Message } }
-  | { event: "error"; data: { code: ChatErrorCode; message: string } };
-
 export type ChatErrorCode =
   | "invalid_message"
   | "message_too_long"
@@ -50,8 +43,10 @@ export type ChatErrorCode =
   | "model_error"
   | "model_unconfigured"
   | "interrupted";
-```
 
-## Sync rule
-
-`apps/web/src/chat/*` maps rows to `Message` with the existing mapper and builds these shapes; adding a field to any of them means updating this file, `contracts/http.md`, and the tests together.
+/** The events of a streamed reply, in order. `meta` first, then `delta`s, then exactly one of `done` or `error`. */
+export type ChatStreamEvent =
+  | { event: "meta"; data: { userMessage: Message; contextInfo: ChatContextInfo } }
+  | { event: "delta"; data: { text: string } }
+  | { event: "done"; data: { assistantMessage: Message } }
+  | { event: "error"; data: { code: ChatErrorCode; message: string } };

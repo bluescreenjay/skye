@@ -15,7 +15,8 @@
 import { spend, type Purpose } from "./budget";
 import { BudgetExceededError, ModelError, ModelUnconfiguredError } from "./errors";
 import { acquire } from "./limiter";
-import { DEADLINE_MS, isAbort, wait, type GenerateJsonOptions } from "./types";
+import { runStream, type Decision } from "./stream-core";
+import { DEADLINE_MS, DEFAULT_CHAT_MAX_TOKENS, isAbort, wait, type GenerateJsonOptions, type StreamTextOptions } from "./types";
 
 export const DEFAULT_BASE_URL = "https://llm-api.arc.vt.edu/api/v1";
 const DEFAULT_MAX_TOKENS = 4_000; // the service caps a non-streaming request at 8,000
@@ -28,7 +29,8 @@ export const DEFAULT_MODELS: Record<Purpose, string> = {
   cluster: "gpt-oss-120b-thinking-low",
   plan: "gpt-oss-120b-thinking-low",
   command: "gpt-oss-120b-thinking-low",
-  chat: "gpt-oss-120b",
+  // Low effort for chat too: measured first words 0.3 s, against 0.5 to 4.2 s (varying with load) for medium.
+  chat: "gpt-oss-120b-thinking-low",
   actions: "gpt-oss-120b",
 };
 
@@ -58,6 +60,31 @@ function retryAfterMs(text: string): number | undefined {
   } catch {
     return undefined;
   }
+}
+
+/** What a non-200 answer from the VT API means. Shared by the JSON call and by streaming. */
+type VtFailure =
+  | { kind: "busy"; delayMs?: number }
+  | { kind: "unavailable" }
+  | { kind: "schema_rejected" }
+  | { kind: "fatal"; error: Error };
+
+export function classifyVtFailure(status: number, text: string, model: string): VtFailure {
+  // At capacity: a 400 with the concurrency detail (not a 429), or a real 429. Transient.
+  if ((status === 400 && CONCURRENCY.test(text)) || status === 429) return { kind: "busy", delayMs: retryAfterMs(text) };
+  // The service or a gateway hiccuped.
+  if ([502, 503, 504].includes(status)) return { kind: "unavailable" };
+  // The strict schema was refused.
+  if ((status === 400 || status === 422) && SCHEMA_REJECTED.test(text)) return { kind: "schema_rejected" };
+  // Not transient.
+  if (status === 403 && VPN.test(text)) {
+    return { kind: "fatal", error: new ModelError("The AI service is only reachable on the VT VPN. Connect to it, or set LLM_PROVIDER=gemini.") };
+  }
+  if (status === 401 || status === 403) return { kind: "fatal", error: new ModelError("The AI service rejected the API key.") };
+  if (status === 404) {
+    return { kind: "fatal", error: new ModelError(`The AI model "${model}" is not available. Set LLM_MODEL to a model your key can call.`) };
+  }
+  return { kind: "fatal", error: new ModelError() };
 }
 
 /** The answer text with a wrapping code fence removed, or null when there is none. */
@@ -141,10 +168,11 @@ export async function vtGenerateJson(options: GenerateJsonOptions): Promise<unkn
       }
     }
 
-    // ---- transient: at capacity (a 400 with this detail, or a 429). Wait, then try again.
-    if ((status === 400 && CONCURRENCY.test(text)) || status === 429) {
+    const failure = classifyVtFailure(status, text, model);
+
+    if (failure.kind === "busy") {
       lastBusy = true;
-      const delay = retryAfterMs(text) ?? Math.min(BASE_BACKOFF_MS * 2 ** attempt, MAX_BACKOFF_MS);
+      const delay = failure.delayMs ?? Math.min(BASE_BACKOFF_MS * 2 ** attempt, MAX_BACKOFF_MS);
       try {
         await sleep(delay, signal);
       } catch {
@@ -153,8 +181,7 @@ export async function vtGenerateJson(options: GenerateJsonOptions): Promise<unkn
       continue;
     }
 
-    // ---- transient: the service or a gateway hiccuped. One retry.
-    if ([502, 503, 504].includes(status)) {
+    if (failure.kind === "unavailable") {
       lastBusy = false;
       if (attempt === 0) {
         try {
@@ -167,24 +194,70 @@ export async function vtGenerateJson(options: GenerateJsonOptions): Promise<unkn
       throw new ModelError("The AI service is temporarily unavailable.");
     }
 
-    // ---- the strict schema was refused: fall back to plain JSON mode once.
-    if ((status === 400 || status === 422) && mode === "json_schema" && SCHEMA_REJECTED.test(text)) {
+    // The strict schema was refused: fall back to plain JSON mode once.
+    if (failure.kind === "schema_rejected" && mode === "json_schema") {
       mode = "json_object";
       continue;
     }
 
-    // ---- not transient.
-    if (status === 403 && VPN.test(text)) {
-      throw new ModelError("The AI service is only reachable on the VT VPN. Connect to it, or set LLM_PROVIDER=gemini.");
-    }
-    if (status === 401 || status === 403) throw new ModelError("The AI service rejected the API key.");
-    if (status === 404) {
-      throw new ModelError(`The AI model "${model}" is not available. Set LLM_MODEL to a model your key can call.`);
-    }
-    throw new ModelError();
+    throw failure.kind === "fatal" ? failure.error : new ModelError();
   }
 
   // Ran out of attempts or time while the service kept saying it was busy.
   if (lastBusy) throw new BudgetExceededError("The AI service is busy right now. Try again in a moment.");
   throw new ModelError("The AI service did not respond in time.");
+}
+
+/**
+ * Streams an answer as it is written (feature 008). The request, retry, slot, deadline, and stop
+ * rules are in stream-core.ts; this file only says how to talk to the VT API: the system message
+ * first, `stream: true`, text in `choices[0].delta.content`, reasoning ignored, `[DONE]` at the end.
+ */
+export async function* vtStreamText(options: StreamTextOptions): AsyncGenerator<string, void, void> {
+  const apiKey = vtApiKey();
+  if (!apiKey) throw new ModelUnconfiguredError();
+
+  const model = vtModelFor(options.purpose);
+  const url = `${vtBaseUrl()}/chat/completions`;
+  const doFetch = options.fetchImpl ?? fetch;
+  const body = JSON.stringify({
+    model,
+    stream: true,
+    temperature: 0.3,
+    max_tokens: options.maxTokens ?? DEFAULT_CHAT_MAX_TOKENS,
+    messages: [{ role: "system", content: options.system }, ...options.messages],
+  });
+
+  yield* runStream({
+    purpose: options.purpose,
+    model,
+    signal: options.signal,
+    sleep: options.sleep,
+    send: (signal) =>
+      doFetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+        body,
+        signal,
+      }),
+    classify(status, text): Decision {
+      const failure = classifyVtFailure(status, text, model);
+      if (failure.kind === "busy") return { kind: "busy", delayMs: failure.delayMs };
+      if (failure.kind === "unavailable") return { kind: "retry_once" };
+      // A stream sends no response_format, so a "schema" complaint is just a bad request.
+      return { kind: "fatal", error: failure.kind === "fatal" ? failure.error : new ModelError() };
+    },
+    extract(payload) {
+      if (payload.trim() === "[DONE]") return { done: true };
+      let data: { choices?: { delta?: { content?: unknown }; finish_reason?: unknown }[] };
+      try {
+        data = JSON.parse(payload);
+      } catch {
+        throw new ModelError("The AI service's answer was interrupted.");
+      }
+      const choice = data?.choices?.[0];
+      const content = choice?.delta?.content; // reasoning_content / reasoning are ignored on purpose
+      return { text: typeof content === "string" ? content : undefined, done: typeof choice?.finish_reason === "string" };
+    },
+  });
 }

@@ -109,7 +109,7 @@ Error messages stored on the run and returned to the client are generic ("The AI
 | `LLM_PROVIDER` | `vt` | `vt` (VT ARC LLM API, default) or `gemini` (backup). One is active per deployment; any other value is a configuration error |
 | `VT_LLM_API_KEY` | none | personal VT key (`LLM_API_KEY` also accepted); server-side only. The API works only on the VT Campus VPN |
 | `LLM_BASE_URL` | `https://llm-api.arc.vt.edu/api/v1` | any OpenAI-compatible endpoint |
-| `LLM_MODEL`, `LLM_MODEL_<PURPOSE>` | `gpt-oss-120b-thinking-low` (cluster, plan, command); `gpt-oss-120b` (chat, actions) | VT model id; the purpose-specific variable wins. Effort is part of the id |
+| `LLM_MODEL`, `LLM_MODEL_<PURPOSE>` | `gpt-oss-120b-thinking-low` (cluster, plan, command, chat); `gpt-oss-120b` (actions) | VT model id; the purpose-specific variable wins. Effort is part of the id |
 | `LLM_CONCURRENCY` | `8` for gpt-oss-120b (documented limit 10) | local cap on simultaneous requests per model family |
 | `GEMINI_API_KEY` | none | the backup provider's key |
 | `GEMINI_MODEL`, `GEMINI_MODEL_<PURPOSE>` | `gemini-3.5-flash-lite` | verified callable on 2026-09-19. `gemini-2.5-flash` is listed but returns 404 for new users |

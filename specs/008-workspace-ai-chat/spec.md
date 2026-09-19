@@ -23,7 +23,7 @@ A person is looking at a page that belongs to a workspace, for example "Kyoto tr
 1. **Given** a workspace with several tabs, **When** the user asks "What have I found so far?", **Then** the reply summarizes what those specific tabs contain and names at least some of them.
 2. **Given** a workspace with several tabs, **When** the user asks "What's missing?", **Then** the reply points out gaps relative to what the tabs cover, and does not present guesses as facts found in a tab.
 3. **Given** a workspace with no tabs, **When** the user sends a message, **Then** the reply says the workspace has no tabs yet, still answers from the conversation so far, and does not invent tabs.
-4. **Given** a workspace with more tabs than can fit in one question, **When** the user asks a question, **Then** the reply is based on a bounded, most-relevant-or-recent subset, the caller is told how many tabs were included out of how many, and the reply does not claim to know the ones left out.
+4. **Given** a workspace with more tabs than can fit in one question, **When** the user asks a question, **Then** the reply is based on a bounded subset (open tabs first, then the most recently seen), the caller is told how many tabs were included out of how many, and the reply does not claim to know the ones left out.
 5. **Given** a tab with no readable page text, **When** the user asks about it, **Then** the assistant still knows its title and address and says when it cannot tell what the page says.
 
 ---
@@ -120,11 +120,11 @@ The person sends a question and the first words of the answer appear almost imme
 - **FR-001**: The system MUST let an authenticated user send a message to one of their own workspaces and receive the assistant's reply.
 - **FR-002**: The context given to the model for a message MUST consist only of: that workspace's tabs (title, address with query string and fragment removed, and a capped page excerpt), that workspace's plan items when any exist, and a bounded recent part of that workspace's earlier conversation. It MUST NOT include anything belonging to another workspace or another user.
 - **FR-003**: The reply MUST be grounded in the workspace: it MUST NOT present a tab, decision, or plan item that is not in the workspace as if it were, and MUST say when it cannot tell (for example a tab with no readable text).
-- **FR-004**: When a workspace has more tabs or more conversation than can be given to the model, the system MUST bound the context, prefer the most recent tabs and turns, tell the caller how many tabs were included out of how many exist, and MUST NOT claim knowledge of what was left out.
+- **FR-004**: When a workspace has more tabs or more conversation than can be given to the model, the system MUST bound the context, prefer open tabs and then the most recently seen ones, and the most recent turns, tell the caller how many tabs were included out of how many exist, and MUST NOT claim knowledge of what was left out.
 - **FR-005**: The reply MUST be delivered as it is produced so the first words reach the caller quickly, and the complete reply MUST be saved as exactly one assistant message when it finishes.
 - **FR-006**: Every user message MUST be saved before the model is asked, and both messages of an exchange MUST be readable later in order, with the times they happened, for that workspace only.
 - **FR-007**: The system MUST let an authenticated user read a workspace's saved conversation, in pages, oldest first, for that user's own workspaces only.
-- **FR-008**: A model request MUST be made only in response to a user sending a message (or explicitly retrying one), MUST be at most one per user message, and MUST NOT be triggered by tab changes, reading history, opening the sidebar, or any timer.
+- **FR-008**: A model request MUST be made only in response to a user sending a message (or explicitly retrying one), and MUST be at most one *logical* request per user message or retry: the attempts the AI layer makes to get that one request through (waiting for a free slot, retrying a busy service before any answer has begun) are not additional requests, and nothing else may cause a call. It MUST NOT be triggered by tab changes, reading history, opening the sidebar, or any timer.
 - **FR-009**: When the AI service is unreachable, busy, over its allowance, or unavailable because a required connection is off, the system MUST keep the user's message, MUST tell the caller which of those happened in plain language, MUST NOT save any assistant message, and MUST NOT lose or duplicate anything on retry.
 - **FR-010**: A partial or cut-off reply (service failure, or the caller stopping) MUST NOT be saved or presented as a complete assistant message.
 - **FR-011**: A user MUST be able to retry an unanswered message without retyping it and without creating a duplicate user message.
@@ -139,7 +139,7 @@ The person sends a question and the first words of the answer appear almost imme
 
 ### Key Entities
 
-- **Message**: One entry in a workspace's conversation: who wrote it (the user or the assistant), the text, the time, and its workspace and owner. Existing shared entity from feature 001; whether a reply finished is an additional fact the plan must record without changing what a client sees as a complete message.
+- **Message**: One entry in a workspace's conversation: who wrote it (the user or the assistant), the text, the time, and its workspace and owner. Existing shared entity from feature 001; an unfinished reply is never stored, so every stored assistant message is complete.
 - **Conversation**: A workspace's messages in order. Not a separate stored thing; it is the workspace's messages read together.
 - **Workspace context**: What the model is given for one question: the workspace's tabs (bounded), plan items, and recent messages. Built fresh for each message, never stored, never containing another workspace's or user's data.
 - **Tab reference, Plan item, Workspace, User**: Existing entities from features 001 and 003. Chat reads them and never changes them.
@@ -153,7 +153,7 @@ The person sends a question and the first words of the answer appear almost imme
 - **SC-003**: After a full restart, 100% of saved messages for a workspace are still there in the same order, and a follow-up question that depends on an earlier exchange gets a reply that uses it.
 - **SC-004**: In a two-user, two-workspace check, 0% of the content given to the model and 0% of replies or history contain another workspace's or another user's tabs, messages, or plan items.
 - **SC-005**: For each of five failure modes (unreachable, busy, allowance spent, connection off, dropped mid-answer), 100% of user messages are still saved exactly once, 0% of incomplete replies are stored as complete, and the caller receives a clear message that names the situation.
-- **SC-006**: Across a session that changes tabs, reads history, and reopens workspaces without sending a message, the system makes 0 model requests; sending N messages makes exactly N (retries of a failed message count as one attempt each, and never exceed one request at a time per message).
+- **SC-006**: Across a session that changes tabs, reads history, and reopens workspaces without sending a message, the system makes 0 model requests; sending N messages makes exactly N, and each explicit retry of a failed message makes exactly one more, counted where chat asks the AI service for an answer (attempts the AI layer makes to get one request through are not counted as extra).
 - **SC-007**: In a reference set of tabs containing instructions aimed at the assistant (for example "ignore previous instructions"), 0 of the injected instructions are obeyed.
 - **SC-008**: Across a full test run, 0 log lines contain message text, tab titles, addresses, excerpts, or model output.
 - **SC-009**: A retried unanswered message results in exactly one user message and at most one assistant message in 100% of trials.
@@ -163,7 +163,7 @@ The person sends a question and the first words of the answer appear almost imme
 
 - Features 001 (shared model), 002 (tab ingestion), and 003 (workspace persistence) exist, and so does the shared AI layer from feature 004 (provider choice, request allowance guard, concurrency handling). Chat builds on them and does not change how tabs are stored or organized.
 - The AI service is whichever provider the deployment is configured for; this spec is provider-neutral and behavior does not depend on which one is used. The request allowance and network restrictions of the configured provider are handled by the shared layer, and this feature only turns them into friendly messages.
-- The existing Message record has no way to say a reply is unfinished. The plan will decide how to record that (for example an extra marker, or saving the assistant message only once complete); either way, a client must only ever see finished assistant messages as complete.
+- The existing Message record has no way to say a reply is unfinished. The plan resolves this by never storing an unfinished reply (the assistant message is saved only once the reply is complete), so no marker is needed and every stored assistant message is complete.
 - There is no notes feature yet and plan items only exist once plan generation (feature 009) ships. Until then the context is tabs and conversation, and plan items are included automatically when they exist.
 - Chat applies to workspaces only. Whether Other should ever have a chat is a product question for later; here it is refused.
 - Context is bounded by planning decisions on the order of 40 tabs, an excerpt of a few hundred characters per tab, and the most recent 20 messages; the exact numbers may change without changing this spec's behavior. A message may be up to 4,000 characters.

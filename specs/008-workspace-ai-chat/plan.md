@@ -26,7 +26,7 @@ Design detail: [research.md](./research.md), [data-model.md](./data-model.md), [
 
 **Performance Goals**: First words within 3 s and a full reply within 20 s for workspaces up to 20 tabs (SC-002). Measured 2026-09-19 on the default provider: `gpt-oss-120b-thinking-low` first words 0.3 s (9 and 20 tabs), full reply about 3 s; the medium model varied from 0.5 to 4.2 s with service load, which is why the low-effort model is the chat default (research section 9).
 
-**Constraints**: Every query filters by `user_id` and the workspace id; nothing else is read for chat. A model request only when a user sends or retries a message, one per message. No retry after the first piece of a reply. The concurrency slot is held for the whole stream. Logs carry ids and counts only. One reply in flight per workspace. No new environment variables.
+**Constraints**: Every query filters by `user_id` and the workspace id; nothing else is read for chat. A model request only when a user sends or retries a message, one logical request per message (attempts inside the AI layer to get it through are not extra requests). No retry after the first piece of a reply. The concurrency slot is held for the whole stream. Logs carry ids and counts only. One reply in flight per workspace. No new environment variables.
 
 **Scale/Scope**: Up to 40 tabs and 20 messages of context per question; a handful of messages a minute per user. Two routes and one migration index.
 
@@ -90,7 +90,7 @@ apps/web/
 │       ├── messages.ts                     # NEW: insert a message, newest message, history page, recent turns
 │       ├── lock.ts                         # NEW: one reply in flight per user+workspace, with a 120 s limit
 │       ├── send.ts                         # NEW: validate, lock, save, build context, start the stream, finish or abandon
-│       ├── friendly.ts                     # NEW: typed errors -> status, code, plain-language message
+│       ├── errors.ts                       # NEW: ChatError (code, status, message) and the mapping from AI-layer errors to status, code, plain-language message
 │       └── events.ts                       # NEW: encode the meta/delta/done/error events
 └── tests/
     ├── chat-helpers.ts                     # NEW: fake chat model (scripted, failing, gated, abort-aware), seeding

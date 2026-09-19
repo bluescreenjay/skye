@@ -27,6 +27,33 @@ export interface GenerateJsonOptions {
 /** One total deadline for a call, including its retries and any wait for a free slot. */
 export const DEADLINE_MS = 25_000;
 
+/** How long a stream may run in total, from the request to the last piece (research section 2 of feature 008). */
+export const STREAM_TOTAL_MS = 90_000;
+
+/** Chat replies are asked to stay concise: at most this many generated tokens. */
+export const DEFAULT_CHAT_MAX_TOKENS = 1_500;
+
+/** One turn of a conversation given to the model. */
+export interface ChatTurn {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface StreamTextOptions {
+  purpose: Purpose;
+  /** The rules and the workspace data, given to the model as its system message. */
+  system: string;
+  /** The conversation, oldest first; the last turn is the user's message. */
+  messages: ChatTurn[];
+  maxTokens?: number;
+  /** Aborting stops the request and frees the concurrency slot. */
+  signal?: AbortSignal;
+  /** Tests only. */
+  fetchImpl?: typeof fetch;
+  /** Tests only: replaces every wait (retry backoff). */
+  sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
+}
+
 /** Waits `ms`, rejecting early if the signal aborts. */
 export function wait(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise<void>((resolve, reject) => {
