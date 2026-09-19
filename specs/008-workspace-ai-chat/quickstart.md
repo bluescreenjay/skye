@@ -55,7 +55,7 @@ for Q in "What have I found so far?" "What's still missing?" "What did we decide
 done
 ```
 
-Expect a stream of `meta`, many `delta`, then `done`. Each answer names specific tabs of this workspace (flights, a hotel, an itinerary) and nothing about sourdough or code. "What did we decide?" says nothing has been decided yet rather than inventing a decision. `meta.context` says how many tabs the answer covers.
+Expect a stream of `meta`, many `delta`, then `done`. Each answer names specific tabs of this workspace (flights, a hotel, an itinerary) and nothing about sourdough or code. "What did we decide?" says nothing has been decided yet rather than inventing a decision. `meta.contextInfo` says how many tabs the answer covers.
 
 ### V2: the conversation is remembered (US2, SC-003)
 

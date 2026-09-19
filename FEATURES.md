@@ -22,7 +22,7 @@ How to use: for each feature, run `/speckit-specify` and paste the **Specify pro
 | 005b | Home → run clustering | P0 | ☑ implemented |
 | 006 | Chrome sidebar — in-tab workspace | P0 | ☐ |
 | 007 | Manual correction | P0 | ☐ |
-| 008 | Workspace AI chat | P0 | ☐ |
+| 008 | Workspace AI chat | P0 | ☑ implemented (server side: the chat API; the sidebar chat panel is part of 006) |
 | 009 | Plan generation | P0 | ☐ |
 | 010 | Contextual actions | P0 | ☐ |
 | 011 | Global command bar | P0 | ☐ |

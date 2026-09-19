@@ -44,18 +44,18 @@ describe("VT / OpenAI-compatible provider: the request", () => {
     expect(init.body as string).not.toContain("test-vt-key");
   });
 
-  it("uses fast low-effort models for structured work and the medium model for chat and actions", () => {
+  it("uses fast low-effort models for structured work and chat, and the medium model for actions", () => {
     expect(DEFAULT_MODELS).toEqual({
       cluster: "gpt-oss-120b-thinking-low",
       plan: "gpt-oss-120b-thinking-low",
       command: "gpt-oss-120b-thinking-low",
-      chat: "gpt-oss-120b",
+      chat: "gpt-oss-120b-thinking-low",
       actions: "gpt-oss-120b",
     });
   });
 
   it("LLM_MODEL_<PURPOSE> beats LLM_MODEL beats the default", () => {
-    expect(vtModelFor("chat")).toBe("gpt-oss-120b");
+    expect(vtModelFor("chat")).toBe("gpt-oss-120b-thinking-low");
     process.env.LLM_MODEL = "general-model";
     expect(vtModelFor("chat")).toBe("general-model");
     process.env.LLM_MODEL_CHAT = "chat-model";

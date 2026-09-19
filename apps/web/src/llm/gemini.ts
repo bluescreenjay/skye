@@ -9,7 +9,8 @@
 //    response body. Nothing here logs.
 import { spend } from "./budget";
 import { BudgetExceededError, ModelError, ModelUnconfiguredError } from "./errors";
-import { DEADLINE_MS, isAbort, wait, type GenerateJsonOptions } from "./types";
+import { runStream, type Decision } from "./stream-core";
+import { DEADLINE_MS, DEFAULT_CHAT_MAX_TOKENS, isAbort, wait, type GenerateJsonOptions, type StreamTextOptions } from "./types";
 
 export const DEFAULT_MODEL = "gemini-3.5-flash-lite";
 const RETRY_DELAY_MS = 1_000;
@@ -152,4 +153,60 @@ function answerText(data: unknown): string | null {
     .map((p) => p.text)
     .join("");
   return text.length > 0 ? text : null;
+}
+
+/**
+ * Streams an answer as it is written (feature 008): `streamGenerateContent?alt=sse`, the system
+ * message as `systemInstruction`, the conversation as `contents` (the assistant's turns use the
+ * role "model"), text in `candidates[0].content.parts[]` with any "thought" parts skipped.
+ * On the free tier a 429 means a quota is used up, so it is never retried (see the top of this file).
+ */
+export async function* geminiStreamText(options: StreamTextOptions): AsyncGenerator<string, void, void> {
+  const apiKey = geminiApiKey();
+  if (!apiKey) throw new ModelUnconfiguredError();
+
+  const model = geminiModelFor(options.purpose);
+  const doFetch = options.fetchImpl ?? fetch;
+  const url = `${ENDPOINT}/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`;
+  const body = JSON.stringify({
+    systemInstruction: { parts: [{ text: options.system }] },
+    contents: options.messages.map((turn) => ({ role: turn.role === "assistant" ? "model" : "user", parts: [{ text: turn.content }] })),
+    generationConfig: {
+      temperature: 0.3,
+      maxOutputTokens: options.maxTokens ?? DEFAULT_CHAT_MAX_TOKENS,
+      thinkingConfig: { thinkingLevel: thinkingLevel() },
+    },
+  });
+
+  yield* runStream({
+    purpose: options.purpose,
+    model,
+    signal: options.signal,
+    sleep: options.sleep,
+    send: (signal) =>
+      doFetch(url, { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": apiKey }, body, signal }),
+    classify(status): Decision {
+      if (status === 429) return { kind: "fatal", error: new BudgetExceededError("The AI service's quota has been reached. Try again later.") };
+      if (status === 503) return { kind: "retry_once" };
+      if (status === 404) return { kind: "fatal", error: new ModelError(`The AI model "${model}" is not available. Set GEMINI_MODEL to a model your key can call.`) };
+      return { kind: "fatal", error: new ModelError() };
+    },
+    extract(payload) {
+      let data: { candidates?: { content?: { parts?: unknown }; finishReason?: unknown }[] };
+      try {
+        data = JSON.parse(payload);
+      } catch {
+        throw new ModelError("The AI service's answer was interrupted.");
+      }
+      const candidate = data?.candidates?.[0];
+      const parts = candidate?.content?.parts;
+      const text = Array.isArray(parts)
+        ? parts
+            .filter((part): part is { text: string; thought?: boolean } => typeof part?.text === "string" && !part.thought)
+            .map((part) => part.text)
+            .join("")
+        : "";
+      return { text: text || undefined, done: typeof candidate?.finishReason === "string" };
+    },
+  });
 }

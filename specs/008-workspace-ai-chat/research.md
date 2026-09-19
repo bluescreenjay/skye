@@ -72,6 +72,8 @@ Decisions that turn the spec into a buildable design. Nothing here is a `NEEDS C
 - **Decision**: No new mechanism. Every attempt already calls `spend("chat")` in the provider; chat's share of the daily guard is 170 of 450. Exactly one logical request per message is enforced by construction: the send path makes one `streamText` call, and reading history, retries that find nothing to answer, refused sends (in flight, invalid, unknown workspace), and every other route never touch the provider. Busy-retries inside the provider before the first piece are attempts, not new requests from the user's point of view (SC-006 counts requests the user caused, and forbids more than one at a time per message).
 - **On failure**: over budget or busy still keeps the user's message (it is saved before the model is asked), and the error body says so.
 
+**Definition used throughout:** "one model request per message" means one *logical* request, counted where chat asks the AI service for an answer. Attempts inside the AI layer to get that one request through (waiting for a free slot, retrying a busy service before any answer began) are not additional requests; an explicit retry of a failed message is one more logical request.
+
 ## 11. Failure messages the user sees
 
 - **Decision**: Fixed, plain-language strings mapped from the shared error types, always ending with the reassurance that the message is saved. No error text, prompt, tab content, or vendor body is ever included.

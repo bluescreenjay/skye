@@ -5,11 +5,11 @@
 // (constitution: Pivot rule; specs/004-ai-clustering/research.md section 1).
 import type { Purpose } from "./budget";
 import { ModelUnconfiguredError } from "./errors";
-import { geminiApiKey, geminiGenerateJson, geminiModelFor } from "./gemini";
-import { vtApiKey, vtGenerateJson, vtModelFor } from "./openai-compat";
-import type { GenerateJsonOptions, Provider } from "./types";
+import { geminiApiKey, geminiGenerateJson, geminiModelFor, geminiStreamText } from "./gemini";
+import { vtApiKey, vtGenerateJson, vtModelFor, vtStreamText } from "./openai-compat";
+import type { GenerateJsonOptions, Provider, StreamTextOptions } from "./types";
 
-export type { GenerateJsonOptions, Provider } from "./types";
+export type { ChatTurn, GenerateJsonOptions, Provider, StreamTextOptions } from "./types";
 
 /** LLM_PROVIDER: `vt` when unset. Anything other than `vt` or `gemini` is a configuration error. */
 export function activeProvider(): Provider {
@@ -39,4 +39,13 @@ export function modelFor(purpose: Purpose): string {
 /** One prompt in, one parsed JSON answer out, through the active provider. */
 export function generateJson(options: GenerateJsonOptions): Promise<unknown> {
   return activeProvider() === "gemini" ? geminiGenerateJson(options) : vtGenerateJson(options);
+}
+
+/**
+ * One prompt in, the answer out as it is written, through the active provider. Same provider
+ * choice, daily budget, and concurrency limit as `generateJson`. Nothing is sent until the
+ * first `next()`; stopping the consumer (or aborting `options.signal`) cancels the request.
+ */
+export function streamText(options: StreamTextOptions): AsyncGenerator<string, void, void> {
+  return activeProvider() === "gemini" ? geminiStreamText(options) : vtStreamText(options);
 }
