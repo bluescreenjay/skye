@@ -2,8 +2,14 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ES2022", "DOM"],
-    "types": ["chrome"],
+    "types": ["chrome", "node", "vite/client"],
     "noEmit": true
   },
-  "include": ["src", "manifest.config.ts"]
+  "include": [
+    "src",
+    "tests",
+    "manifest.config.ts",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ]
 }

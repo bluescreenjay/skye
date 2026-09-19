@@ -4,7 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build": "vite build",
+    "test": "vitest run",
+    "stub": "node scripts/stub-receiver.mjs"
   },
   "dependencies": {
     "@ai-browser/shared": "workspace:*"
@@ -12,7 +15,9 @@
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.0.0",
     "@types/chrome": "^0.3.0",
+    "@types/node": "^22.0.0",
     "typescript": "^5.6.0",
-    "vite": "^7.0.0"
+    "vite": "^7.0.0",
+    "vitest": "^5.0.0"
   }
 }
