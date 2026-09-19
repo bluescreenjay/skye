@@ -1,0 +1,30 @@
+# Ready-to-paste: /speckit-constitution
+
+> Constitution is at `.specify/memory/constitution.md` (v1.3.0).
+> Keep this prompt for amendments or re-runs. Paste everything below the line into chat after `/speckit-constitution`.
+
+---
+
+AI Browser is an AI-native browser experience (Chrome extension + server MVP, not a full browser) that turns related tabs into persistent workspaces with memory, plans, chat, and actions.
+
+Establish the project constitution with these non-negotiable principles:
+
+1. Workspace-First — The unit of product is the workspace, not the tab. Tabs are inputs; workspaces own memory, plan, chat, notes, and actions. Closing tabs/browser must not destroy workspaces.
+
+2. Extension Observes and Presents; Server Decides — Chrome MV3 captures tabs/page snippets and applies tab moves. It also hosts the two UIs (Home and Side Panel). Next.js + primary Postgres own clustering, persistence, AI, plans, chat, and actions. No full Chromium fork in MVP.
+
+3. User Corrections Win — Drag, rename, merge, Other, and dismiss always override AI. Home is the place to reorganize across workspaces; the sidebar can move the active tab. Low confidence should suggest, not silently force. Corrections are feedback signals.
+
+4. Least-Power Actions — Hard-coded tools + Gemini tool-calling for MVP. No computer-use agents. MCP and dynamic action discovery are stretch only.
+
+5. One TypeScript Surface — pnpm monorepo (`apps/extension`, `apps/web`, `packages/shared`). Shared types for User, Workspace, TabRef, TabEvent, PlanItem, Message, ActionRun, Correction. Every durable row is user-scoped. Home and Sidebar share components; no forked UIs.
+
+6. Demo-Hard, Architecture-Soft — Ship core loop first: ingest → cluster → persist → Home → Sidebar → correct → chat → plan → actions → ⌘K. Desktop ElevenLabs voice and saved workspaces are P1. Mobile is stretch. Prize vendors are preferred, not load-bearing: if they fail, pivot to the originals (Gemini → Claude/GPT, Tiger → Supabase, ElevenLabs → skip/Web Speech, Vultr → Vercel/local, GoDaddy → skip). Keep types/APIs stable so a pivot is a vendor swap.
+
+7. Two Surfaces — Home is the directory of all workspaces (Chrome new-tab / extension home). Sidebar is the Chrome Side Panel on a web page, showing that tab’s workspace plus plan, actions, and chat. Switching tabs retargets the sidebar. Both are required for MVP; a standalone web app is not the in-tab workspace UI.
+
+Locked stack (preferred → pivot): TypeScript; Chrome MV3 + Vite + CRXJS/Plasmo (new-tab Home + Side Panel); Next.js App Router + React + Tailwind; Tiger Data Timescale Postgres with tab_events (pivot Supabase Postgres); user_id + device token (pivot Supabase Auth); Google Gemini API (pivot Claude or GPT-4.1); Vultr (pivot Vercel/local); GoDaddy domain (pivot skip). ElevenLabs desktop voice after 011 (pivot skip or Web Speech).
+
+Do not add Solana, Presage, or MongoDB Atlas. Do not run two primary databases at once.
+
+MVP feature cut line is 001–011 (see FEATURES.md). Product truth: initialspec.txt. Stack detail: tech-stack.txt.
