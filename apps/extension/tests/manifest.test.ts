@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import manifest from "../manifest.config";
 
 // The manifest is the extension's contract with the browser: what it may read
-// and which surfaces it adds. See specs/002-tab-ingestion-extension/contracts/extension-config.md.
+// and which surfaces it adds. See specs/006-chrome-sidebar-in-tab-workspace/contracts/sidebar.md.
 const m = manifest as unknown as Record<string, unknown>;
 
 describe("manifest", () => {
@@ -12,7 +12,7 @@ describe("manifest", () => {
   });
 
   it("asks for the permissions the design needs", () => {
-    expect([...(m.permissions as string[])].sort()).toEqual(["alarms", "geolocation", "scripting", "storage"]);
+    expect([...(m.permissions as string[])].sort()).toEqual(["alarms", "geolocation", "scripting", "sidePanel", "storage"]);
     expect([...(m.host_permissions as string[])].sort()).toEqual(["http://*/*", "https://*/*"]);
   });
 
@@ -25,9 +25,13 @@ describe("manifest", () => {
     expect(m.action).not.toHaveProperty("default_popup");
   });
 
+  it("provides a separate Side Panel page without taking the toolbar action", () => {
+    expect(m.side_panel).toEqual({ default_path: "sidepanel.html" });
+    expect(m.action).toEqual({ default_title: "skye home" });
+  });
+
   it.each([
     "chrome_url_overrides", // Home is feature 005
-    "side_panel", // Sidebar is feature 006
     "content_scripts",
     "web_accessible_resources",
     "options_page",
@@ -40,7 +44,7 @@ describe("manifest", () => {
     expect(m).not.toHaveProperty(key);
   });
 
-  it.each(["tabs", "activeTab", "<all_urls>", "unlimitedStorage", "sidePanel", "tabGroups", "history", "bookmarks", "cookies", "webNavigation", "webRequest"])(
+  it.each(["tabs", "activeTab", "<all_urls>", "unlimitedStorage", "tabGroups", "history", "bookmarks", "cookies", "webNavigation", "webRequest"])(
     "does not ask for the %s permission",
     (permission) => {
       const asked = [...((m.permissions as string[]) ?? []), ...((m.host_permissions as string[]) ?? [])];

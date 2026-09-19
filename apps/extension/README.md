@@ -1,7 +1,8 @@
 # @ai-browser/extension
 
 Chrome (Manifest V3) extension that **observes** your tabs, reports them to the AI Browser
-backend, and opens **Home** — the all-workspaces directory — from the toolbar icon.
+backend, opens **Home** — the all-workspaces directory — from the toolbar icon, and shows
+the active tab's workspace in Chrome's Side Panel.
 
 It never moves, groups, or closes a Chrome tab, decides workspaces, or runs AI. Home can
 rename workspaces and reassign saved tab refs through the API; clicking a tab opens that
@@ -11,6 +12,21 @@ URL in a new browser tab and leaves Home open.
 
 Click the toolbar icon. Home is an extension page (`home.html`), not Chrome’s new-tab page
 and not a popup. A normal Ctrl/Cmd+T stays the browser default.
+
+## Sidebar
+
+On a normal web page, open Chrome's Side Panel picker and select **AI Browser**. The panel
+shows the active tab's saved workspace or Other, plus saved related pages. Switching tabs
+retargets the panel; selecting a related page opens it in a normal browser tab. Plan,
+suggested-action, and chat areas are placeholders until later features. Closing the panel
+does not change a workspace or its tab assignments. The toolbar icon still opens Home.
+Activating Home (or the panel's **home** control) closes the Side Panel; it stays disabled
+while Home is the active tab.
+
+The panel chrome follows `design_mockup/` (home control, wordmark, address, member list,
+dock) with Home's accent/type tokens. The panel uses the same `VITE_API_BASE_URL` and
+`VITE_DEVICE_TOKEN` as Home. If pairing or the server is unavailable, it shows a quiet
+status rather than another tab's workspace.
 
 Layout matches `specs/005-home-all-workspaces/mocks/home-design-prototype/` (Home view only):
 photo, rail, “skye”, url field, greeting, workspace cards. Other tabs are rail-top icons, never
@@ -87,7 +103,9 @@ Same icon that opens Home. Nothing is shown on the badge while ingest is fine.
 
 | File | Role |
 | --- | --- |
-| `home.html`, `src/home/` | Home directory page (toolbar). Mock CSS, 003 API client, weather, letter marks. |
+| `home.html`, `src/home/` | Home directory page (toolbar). Mock CSS, 003 API client, weather. |
+| `sidepanel.html`, `src/sidebar/` | In-tab workspace panel: active-page context, saved members, future tool areas. |
+| `src/ui/` | Tab marks and rows shared by Home and Sidebar. |
 | `src/background.ts` | Service worker: ingest listeners plus `action.onClicked` → Home. |
 | `src/collector.ts` | Chrome tab events → queued events and pending snapshots (the 2 s settle and 30 s cap). |
 | `src/snapshot.ts` | Full snapshots, browser-start reset, and the active-tab sample. |
