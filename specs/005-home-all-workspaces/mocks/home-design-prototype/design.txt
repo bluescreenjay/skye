@@ -1,0 +1,30 @@
+LAYOUT:
+create a home view that is like
+*small skinny sidebar similar size as a collapsed icon sidebar with space for ungrouped tab icons and then where those end
+a small divider and then under those icons for saved workspaces kind of like ios apple where there's an app group and four icons inside it
+a search bar on the top across the whole page with the place holder text url bar,
+and under that rectangular workspace rounded corner rectangles that can exist in two states, collapsed or open
+in collapsed state they will show an (editable) name and then the first few icons in the tab group you can fit on there and be a not so tall rectangle
+in open state they will drop into a more tall rectangle they will show the tabs in a scrollable way in the first third of the rectangle,
+action buttons with an accent color in the second third with  another ai search bar with the placeholder text "ask the workspace anything"  at the bottom of that third and then the last third holds created artifacts
+and you can drag and drop icons between workspaces in the home view (but if you want you can add that in a later stage)
+and if there are more horizontals than you can fit then you should be able to scroll the page
+
+create a second view that shows an open tab or maybe space for it and code a sidebar to the left and within the sidebar there's these sections
+*small skinny sidebar similar size as a collapsed icon sidebar with space for ungrouped tab icons and then where those end
+a small divider and then under those icons for open workspaces kind of like ios apple where there's an app group and four icons inside it and a divider under that
+then saved workspaces under that the same way
+next to it a thicker decently sidebar sized sidebar but not TOO big with a search bar on the top of the second sidebar with the place holder text url bar,
+a space for open tbas (think kind of like vertical tabs but not super compact give it a little negative space)
+and then under it a similar section except abround three buttons (an accent color) for actions and another ai search bar with the placeholder text "ask the workspace anything"  
+and a small home button at the top of that sidebar
+
+and of course scroll bars wherever necessary
+
+use the image as the background and build white rounded rectangles on top of that. except sidebars should not be rounded rectangels they should be sidebar shape.
+
+RULES:
+use a bold sans serif tech font for titles and a thinner version of the same one for text. 
+have text on the background be white and text on a white or light background be #DB5B45
+all lowercase
+have it be NOT ai vibecoded type. create a list of what looks AI vibecoded and stay away from it.  

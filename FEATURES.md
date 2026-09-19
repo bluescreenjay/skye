@@ -18,7 +18,7 @@ How to use: for each feature, run `/speckit-specify` and paste the **Specify pro
 | 002 | Tab ingestion extension | P0 | ☑ implemented |
 | 003 | Workspace persistence API | P0 | ☑ implemented (incl. the ingest endpoint for 002) |
 | 004 | AI clustering | P0 | ☑ implemented (server side: the API only; Home and sidebar UI are 005 and 006) |
-| 005 | Home — all workspaces | P0 | ☐ |
+| 005 | Home — all workspaces | P0 | ☑ implemented (toolbar Home; no new-tab override) |
 | 006 | Chrome sidebar — in-tab workspace | P0 | ☐ |
 | 007 | Manual correction | P0 | ☐ |
 | 008 | Workspace AI chat | P0 | ☐ |
@@ -139,22 +139,23 @@ Add AI clustering that turns a messy set of open tabs into named workspaces. Use
 **What:** The landing directory: every workspace plus Other, not the in-page workspace.
 
 **In scope**
-- Chrome new-tab / extension Home page
-- List all workspaces (name, emoji, tab count) and the Other bucket
-- Open a workspace overview from Home (member tabs; plan/actions/chat can be stubs)
-- Empty and loading states
-- Feels like a map of your work, not a bookmark manager
+- Extension page opened from the **toolbar icon** (full Home, not a popup)
+- Layout matches the Home view of the checked-in mock (rail + photo + cards); not Tailwind
+- Named workspaces as cards and rail tiles; Other as rail-top icons only (not a named “other” card)
+- Expand one card on Home for tabs + stub actions/ask/artifacts; click a tab opens its URL in a new browser tab
+- Rename and drag membership persist through the 003 API; real data only (empty chrome if unpaired)
+- Greeting with local time + weather (location when allowed)
 
-**Out of scope:** Chrome Side Panel (006), live chat/plan/actions (008–010), ⌘K (011)
+**Out of scope:** Chrome Side Panel (006), `chrome_url_overrides` / new-tab takeover, create-workspace control (007), live chat/plan/actions (008–010), ⌘K (011), dummy seed workspaces
 
 **Depends on:** 003 (004 preferred for demo data)  
 **Unblocks:** 007, 011
 
-**Done when:** User can open Home and see all workspaces/Other without visiting a random web page.
+**Done when:** Toolbar opens Home; a normal new tab stays Chrome’s default; the person sees all workspaces/Other in the mock layout without visiting a random web page.
 
 **Specify prompt**
 ```text
-Build the AI Browser Home view: the directory of all workspaces plus an Other bucket. Home is the landing page (Chrome new-tab / extension home), not a page you only reach after opening an article. Users should see every workspace at a glance, open a workspace to see its tabs, and understand the layout of their work. This is the forest view. Do not build the Chrome sidebar here—that is the in-tab workspace. Chat, live plans, and real actions can be stubbed.
+Build the AI Browser Home view: the directory of all workspaces plus an Other bucket. Open Home from the extension toolbar only—do not take over Chrome’s new-tab page. Layout must match the Home view of the provided HTML mock (home-design-prototype): photo, left icon rail, wordmark, url field, greeting, stacked workspace cards. Other is rail-top icons, never a fake named card. Expand a card on Home to peek at tabs (actions/ask/artifacts can be stubs). Clicking a tab opens that URL in a new browser tab; Home stays. Rename and drag persist via the 003 API. No Side Panel, no create-workspace control, no dummy furniture seed data. Chat, live plans, and real actions can be stubbed.
 ```
 
 ---

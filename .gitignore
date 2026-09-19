@@ -9,3 +9,5 @@ next-env.d.ts
 apps/*/.env*
 !apps/*/.env.example
 .DS_Store
+
+.pnpm-store/

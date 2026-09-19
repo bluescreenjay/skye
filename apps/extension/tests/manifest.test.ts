@@ -11,8 +11,8 @@ describe("manifest", () => {
     expect(m.background).toEqual({ service_worker: "src/background.ts", type: "module" });
   });
 
-  it("asks for exactly the permissions the design needs", () => {
-    expect([...(m.permissions as string[])].sort()).toEqual(["alarms", "scripting", "storage"]);
+  it("asks for the permissions the design needs", () => {
+    expect([...(m.permissions as string[])].sort()).toEqual(["alarms", "geolocation", "scripting", "storage"]);
     expect([...(m.host_permissions as string[])].sort()).toEqual(["http://*/*", "https://*/*"]);
   });
 
@@ -20,8 +20,9 @@ describe("manifest", () => {
     expect(m.incognito).toBe("not_allowed");
   });
 
-  it("has a bare toolbar action, with no popup, only so the status badge can show", () => {
-    expect(m.action).toEqual({ default_title: "AI Browser sync" });
+  it("has a toolbar action with no popup so the badge can show and Home can open", () => {
+    expect(m.action).toEqual({ default_title: "skye home" });
+    expect(m.action).not.toHaveProperty("default_popup");
   });
 
   it.each([
