@@ -7,6 +7,7 @@ import { createCollector } from "./collector";
 import { createConfigLoader } from "./config";
 import { createHeartbeat, resetSyncState } from "./heartbeat";
 import { createDrainScheduler, createSender } from "./sender";
+import { installSidePanelGate } from "./sidepanel-gate";
 import { createSnapshotter } from "./snapshot";
 import { applyStatus } from "./status";
 import { createStore } from "./store";
@@ -102,4 +103,7 @@ chrome.action.onClicked.addListener(() => {
     .create({ url: chrome.runtime.getURL("home.html") })
     .catch((error) => console.warn("[ai-browser] could not open Home", error));
 });
+
+// Close/disable the Side Panel on Home and other non-web tabs; keep it on pages.
+installSidePanelGate();
 
