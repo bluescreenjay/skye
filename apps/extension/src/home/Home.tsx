@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState, type DragEvent, type MouseEve
 import type { TabRef, Workspace } from "@ai-browser/shared";
 import { loadDirectory, moveTab, renameWorkspace, runCluster } from "./api";
 import { composeDirectory, type HomeDirectory } from "./compose";
-import { markFromTab } from "./icons";
+import { openHomeTab } from "./navigation";
+import { TabMark } from "../ui/TabMark";
+import { TabRow } from "../ui/TabRow";
 import type { OrganizeStatus } from "./organize";
 import { loadWeatherPhrase } from "./weather";
 
@@ -24,23 +26,6 @@ function workHint(cards: HomeDirectory["cards"]): string {
 
 function greetingText(weather: string, cards: HomeDirectory["cards"]): string {
   return `hi. it's ${formatTime()} and the weather where you are is ${weather}. some trends in your browsing tabs are ${workHint(cards)}. what will you get done today?`;
-}
-
-function Mark({ url, title, size }: { url: string; title: string; size: 16 | 22 | 28 }) {
-  const { letter, hue } = markFromTab(url, title);
-  return (
-    <span className={`mark mark-letter sz-${size} mark-h${hue}`} aria-hidden>
-      {letter}
-    </span>
-  );
-}
-
-function openTabUrl(url: string): void {
-  try {
-    void chrome.tabs.create({ url });
-  } catch {
-    window.open(url, "_blank", "noopener");
-  }
 }
 
 export function Home() {
@@ -147,7 +132,7 @@ export function Home() {
   const openTab = (tab: TabRef) => (event: MouseEvent) => {
     event.stopPropagation();
     if (afterDragClick(event)) return;
-    openTabUrl(tab.url);
+    void openHomeTab(tab);
   };
 
   const toggleCard = (workspaceId: string) => (event: MouseEvent) => {
@@ -189,7 +174,7 @@ export function Home() {
               onDragEnd={onDragEnd}
               onClick={openTab(tab)}
             >
-              <Mark url={tab.url} title={tab.title} size={28} />
+              <TabMark url={tab.url} title={tab.title} size={28} />
             </button>
           ))}
         </div>
@@ -210,7 +195,7 @@ export function Home() {
               {...bindDrop(card.workspace.id)}
             >
               {card.tabs.slice(0, 4).map((tab) => (
-                <Mark key={tab.id} url={tab.url} title={tab.title} size={16} />
+                <TabMark key={tab.id} url={tab.url} title={tab.title} size={16} />
               ))}
             </button>
           ))}
@@ -312,7 +297,7 @@ function WorkspaceCardView({
               onDragEnd={onDragEnd}
               onClick={onOpenTab(tab)}
             >
-              <Mark url={tab.url} title={tab.title} size={22} />
+              <TabMark url={tab.url} title={tab.title} size={22} />
             </span>
           ))}
         </div>
@@ -321,18 +306,15 @@ function WorkspaceCardView({
         <div className="card-thirds">
           <div className="band">
             {card.tabs.map((tab) => (
-              <button
+              <TabRow
                 key={tab.id}
-                className={`tab-row is-entering${draggingId === tab.id ? " is-dragging" : ""}`}
-                type="button"
+                tab={tab}
+                className={`is-entering${draggingId === tab.id ? " is-dragging" : ""}`}
                 draggable
                 onDragStart={onDragStart(tab.id)}
                 onDragEnd={onDragEnd}
                 onClick={onOpenTab(tab)}
-              >
-                <Mark url={tab.url} title={tab.title} size={16} />
-                <span className="tab-title">{tab.title.toLowerCase()}</span>
-              </button>
+              />
             ))}
           </div>
           <div className="band band-actions">

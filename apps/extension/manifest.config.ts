@@ -5,7 +5,7 @@ import { defineManifest } from "@crxjs/vite-plugin";
 // specs/005-home-all-workspaces/contracts/extension-home.md.
 //
 // Deliberately absent:
-//   chrome_url_overrides (new-tab takeover deferred), side_panel (feature 006),
+//   chrome_url_overrides (new-tab takeover deferred),
 //   default_popup (Home is a full page), tabs, activeTab, <all_urls>,
 //   content_scripts, unlimitedStorage.
 export default defineManifest({
@@ -19,7 +19,8 @@ export default defineManifest({
   // storage: durable backlog. alarms: 30-second heartbeat.
   // scripting: read a short text snippet from a page.
   // geolocation: Home greeting weather (page geolocation on chrome-extension://).
-  permissions: ["storage", "alarms", "scripting", "geolocation"],
+  permissions: ["storage", "alarms", "scripting", "geolocation", "sidePanel"],
+  side_panel: { default_path: "sidepanel.html" },
   // Lets the extension read url/title of web pages and their text, and reach
   // the API without CORS. Internal and extension pages never match.
   host_permissions: ["http://*/*", "https://*/*"],

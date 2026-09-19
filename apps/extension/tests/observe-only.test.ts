@@ -11,8 +11,8 @@ const SRC = join(__dirname, "..", "src");
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     if (entry.isDirectory()) {
-      // Home (feature 005) is a UI page; ingest modules stay observe-only.
-      if (entry.name === "home") return [];
+      // Home and Sidebar are product UI surfaces; ingest modules stay observe-only.
+      if (entry.name === "home" || entry.name === "sidebar") return [];
       return sourceFiles(join(dir, entry.name));
     }
     return entry.name.endsWith(".ts") ? [join(dir, entry.name)] : [];
@@ -40,6 +40,8 @@ describe("the extension only observes: no call can change the browser's tabs or 
 
   it.each(forbidden.map((re) => [String(re), re] as const))("no source file matches %s", (_name, re) => {
     for (const file of files) {
+      // Side Panel enable/disable for Home vs web pages lives in the gate module.
+      if (re.source.includes("sidePanel") && file.endsWith("sidepanel-gate.ts")) continue;
       const text = readFileSync(file, "utf8");
       expect(text, file).not.toMatch(re);
     }
