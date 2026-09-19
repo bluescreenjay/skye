@@ -14,8 +14,8 @@ How to use: for each feature, run `/speckit-specify` and paste the **Specify pro
 
 | ID | Feature | Priority | Status |
 | --- | --- | --- | --- |
-| 001 | Monorepo + shared domain model | P0 | ☑ spec |
-| 002 | Tab ingestion extension | P0 | ☐ |
+| 001 | Monorepo + shared domain model | P0 | ☑ done |
+| 002 | Tab ingestion extension | P0 | ☑ spec |
 | 003 | Workspace persistence API | P0 | ☐ |
 | 004 | AI clustering | P0 | ☐ |
 | 005 | Home — all workspaces | P0 | ☐ |
@@ -104,7 +104,7 @@ Build the Chrome MV3 tab ingestion extension for AI Browser. The extension must 
 
 **Specify prompt**
 ```text
-Build the workspace persistence API for AI Browser on Tiger Data. Users need durable, user-scoped workspaces that survive closing tabs and the browser. Support creating/listing/renaming/archiving workspaces, assigning tab refs to a workspace or to an Other bucket, resolving the workspace for an active tab, and appending tab lifecycle rows to a tab_events hypertable. Home (directory) and the Chrome sidebar share this API via a device pairing token. No AI clustering yet—manual and API-driven assignment is enough.
+Build the workspace persistence API for AI Browser on Tiger Data. Users need durable, user-scoped workspaces that survive closing tabs and the browser. Support creating/listing/renaming/archiving workspaces, assigning tab refs to a workspace or to an Other bucket, resolving the workspace for an active tab, and appending tab lifecycle rows to a tab_events hypertable. Home (directory) and the Chrome sidebar share this API via a device pairing token. No AI clustering yet—manual and API-driven assignment is enough. The Chrome extension (feature 002) already sends batched tab snapshots and events to POST /api/ingest/tabs with a bearer device token; implement that contract (specs/002-tab-ingestion-extension/contracts/ingest-api.md): authenticate by the token and derive the user from it, match each reported tab to an existing tab ref by user and address, refresh the stored browser tab id from every snapshot and clear it for tabs missing from a full snapshot, and count each event once by its event id.
 ```
 
 ---
