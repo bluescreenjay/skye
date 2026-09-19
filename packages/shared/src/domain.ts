@@ -16,6 +16,9 @@ export type MessageRole = "user" | "assistant" | "system";
 
 export type ActionRunStatus = "pending" | "succeeded" | "failed";
 
+/** Who placed a tab: an AI clustering run, or the user (including keeping it in Other). */
+export type PlacementSource = "ai" | "user";
+
 export interface User {
   id: string;
   deviceTokenHash: string;
@@ -41,6 +44,12 @@ export interface TabRef {
   snippet: string;
   chromeTabId: number | null;
   lastSeenAt: string;
+  /**
+   * null = never placed. "user" = the user placed it (or deliberately kept it in
+   * Other). "ai" = a clustering run placed it. Later AI runs only touch tabs that
+   * are in Other and null here.
+   */
+  placementSource: PlacementSource | null;
 }
 
 export interface TabEvent {

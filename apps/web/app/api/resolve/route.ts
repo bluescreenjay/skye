@@ -1,7 +1,7 @@
 import { requireUser } from "@/src/auth";
 import { query } from "@/src/db";
 import { errorJson, json, optionsResponse } from "@/src/json";
-import { mapTabRef, mapWorkspace, type DbTabRef, type DbWorkspace } from "@/src/map";
+import { mapTabRef, mapWorkspace, TAB_REF_COLUMNS, type DbTabRef, type DbWorkspace } from "@/src/map";
 
 export const runtime = "nodejs";
 
@@ -28,7 +28,7 @@ export async function GET(request: Request) {
       return errorJson("chromeTabId must be an integer", 400);
     }
     const byChrome = await query<DbTabRef>(
-      `SELECT id, user_id, workspace_id, url, title, snippet, chrome_tab_id, last_seen_at
+      `SELECT ${TAB_REF_COLUMNS}
        FROM tab_refs WHERE user_id = $1 AND chrome_tab_id = $2`,
       [user!.id, chromeTabId],
     );
@@ -37,7 +37,7 @@ export async function GET(request: Request) {
 
   if (!tabRow && url) {
     const byUrl = await query<DbTabRef>(
-      `SELECT id, user_id, workspace_id, url, title, snippet, chrome_tab_id, last_seen_at
+      `SELECT ${TAB_REF_COLUMNS}
        FROM tab_refs WHERE user_id = $1 AND url = $2
        ORDER BY last_seen_at DESC LIMIT 1`,
       [user!.id, url],
