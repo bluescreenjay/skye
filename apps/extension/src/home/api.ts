@@ -1,5 +1,6 @@
 import type { TabRef, Workspace } from "@ai-browser/shared";
 import { loadConfig } from "../config";
+import { mapClusterHttpResult, type OrganizeOutcome } from "./organize";
 
 function authHeaders(token: string): HeadersInit {
   return {
@@ -77,5 +78,25 @@ export async function moveTab(id: string, workspaceId: string | null): Promise<T
     return body?.tabRef ?? null;
   } catch {
     return null;
+  }
+}
+
+/** POST /api/cluster/runs then map to Home organize outcome. Does not invent directory rows. */
+export async function runCluster(): Promise<OrganizeOutcome> {
+  const result = loadConfig(import.meta.env);
+  if (!result.ok) {
+    return mapClusterHttpResult(401, { error: result.reason });
+  }
+
+  try {
+    const response = await fetch(`${result.config.apiBaseUrl}/api/cluster/runs`, {
+      method: "POST",
+      headers: authHeaders(result.config.deviceToken),
+      body: JSON.stringify({}),
+    });
+    const body = await readJson<unknown>(response);
+    return mapClusterHttpResult(response.status, body);
+  } catch {
+    return mapClusterHttpResult(0, null);
   }
 }

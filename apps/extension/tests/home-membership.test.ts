@@ -24,6 +24,7 @@ function tab(id: string, title: string, workspaceId: string | null): TabRef {
     snippet: "",
     chromeTabId: null,
     lastSeenAt: "2026-01-01T00:00:00.000Z",
+    placementSource: null,
   };
 }
 

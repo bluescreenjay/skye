@@ -16,7 +16,12 @@ Layout matches `specs/005-home-all-workspaces/mocks/home-design-prototype/` (Hom
 photo, rail, “skye”, url field, greeting, workspace cards. Other tabs are rail-top icons, never
 a named “other” card. There is no create-workspace control and no dummy seed data.
 
-Walkthrough: `specs/005-home-all-workspaces/quickstart.md`.
+**Organize** (feature 005b) posts to `POST /api/cluster/runs` with the same device token, then
+reloads workspaces and tab-refs so new groups appear. Home never invents workspace names or runs
+Gemini itself. The API needs `GEMINI_API_KEY` (see repo-root `.env`). Walkthrough:
+`specs/005b-home-run-clustering/quickstart.md`.
+
+Walkthrough (directory only): `specs/005-home-all-workspaces/quickstart.md`.
 
 ## What it reports (ingest)
 

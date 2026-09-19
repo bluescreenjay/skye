@@ -1,6 +1,6 @@
 # AI Browser — Feature Checklist
 
-Ordered Spec Kit features. **MVP cut line: 001–011.** Do not start P1/stretch until the cut line ships.
+Ordered Spec Kit features. **MVP cut line: 001–011** (includes **005b**). Do not start P1/stretch until the cut line ships.
 
 Two views (constitution Principle VII): **Home** = all workspaces; **Sidebar** = Chrome Side Panel on the current tab.
 
@@ -17,8 +17,9 @@ How to use: for each feature, run `/speckit-specify` and paste the **Specify pro
 | 001 | Monorepo + shared domain model | P0 | ☑ done |
 | 002 | Tab ingestion extension | P0 | ☑ implemented |
 | 003 | Workspace persistence API | P0 | ☑ implemented (incl. the ingest endpoint for 002) |
-| 004 | AI clustering | P0 | ☑ implemented (server side: the API only; Home and sidebar UI are 005 and 006) |
+| 004 | AI clustering | P0 | ☑ implemented (server side: the API only; Home trigger is 005b; sidebar UI is 006) |
 | 005 | Home — all workspaces | P0 | ☑ implemented (toolbar Home; no new-tab override) |
+| 005b | Home → run clustering | P0 | ☑ implemented |
 | 006 | Chrome sidebar — in-tab workspace | P0 | ☐ |
 | 007 | Manual correction | P0 | ☐ |
 | 008 | Workspace AI chat | P0 | ☐ |
@@ -120,10 +121,10 @@ Build the workspace persistence API for AI Browser on Tiger Data. Users need dur
 - Low confidence: return suggestions for user confirm (do not silently force)
 - Respect existing workspaces and Other
 
-**Out of scope:** Embeddings, learning from corrections (store hooks OK), Home/Sidebar chrome
+**Out of scope:** Embeddings, learning from corrections (store hooks OK), Home/Sidebar chrome (Home trigger is 005b; Side Panel is 006)
 
 **Depends on:** 002, 003  
-**Unblocks:** 005, 006, 009, 011
+**Unblocks:** 005b, 006, 009, 011
 
 **Done when:** A messy tab set produces sensible named workspaces (or clear suggestions) without user labeling each tab.
 
@@ -146,16 +147,40 @@ Add AI clustering that turns a messy set of open tabs into named workspaces. Use
 - Rename and drag membership persist through the 003 API; real data only (empty chrome if unpaired)
 - Greeting with local time + weather (location when allowed)
 
-**Out of scope:** Chrome Side Panel (006), `chrome_url_overrides` / new-tab takeover, create-workspace control (007), live chat/plan/actions (008–010), ⌘K (011), dummy seed workspaces
+**Out of scope:** Chrome Side Panel (006), `chrome_url_overrides` / new-tab takeover, create-workspace control (007), triggering clustering (005b), live chat/plan/actions (008–010), ⌘K (011), dummy seed workspaces
 
 **Depends on:** 003 (004 preferred for demo data)  
-**Unblocks:** 007, 011
+**Unblocks:** 005b, 007, 011
 
 **Done when:** Toolbar opens Home; a normal new tab stays Chrome’s default; the person sees all workspaces/Other in the mock layout without visiting a random web page.
 
 **Specify prompt**
 ```text
 Build the AI Browser Home view: the directory of all workspaces plus an Other bucket. Open Home from the extension toolbar only—do not take over Chrome’s new-tab page. Layout must match the Home view of the provided HTML mock (home-design-prototype): photo, left icon rail, wordmark, url field, greeting, stacked workspace cards. Other is rail-top icons, never a fake named card. Expand a card on Home to peek at tabs (actions/ask/artifacts can be stubs). Clicking a tab opens that URL in a new browser tab; Home stays. Rename and drag persist via the 003 API. No Side Panel, no create-workspace control, no dummy furniture seed data. Chat, live plans, and real actions can be stubbed.
+```
+
+---
+
+### 005b — Home → run clustering
+
+**What:** From Home, trigger the existing 004 clustering API so Other tabs become named workspace cards without curling by hand.
+
+**In scope**
+- One clear control on Home (e.g. “organize” / “cluster tabs”) that `POST`s `/api/cluster/runs` with the same Bearer token as ingest/Home
+- After a successful run, reload workspaces + tab-refs so cards and the Other rail update
+- Quiet loading / error / empty states (misconfigured Gemini, 401, in-progress run) without changing the mock’s Home structure more than necessary for that control
+- Optional: surface pending 004 suggestions count or a simple accept/ignore path later in 007; MVP of 005b may only apply high-confidence groups via the existing server behavior
+
+**Out of scope:** Reimplementing Gemini/clustering logic in the extension; ⌘K (011); Side Panel (006); create-workspace UI (007); soft continuous suggestions (012)
+
+**Depends on:** 004, 005  
+**Unblocks:** demoable named workspaces on Home; makes 006/011 less dependent on curl
+
+**Done when:** With ingested tabs in Other, the person clicks organize on Home, waits for the run, and sees named workspace cards (or clear failure copy) without leaving Home or using curl.
+
+**Specify prompt**
+```text
+Add a thin Home trigger for AI Browser clustering. Home already lists workspaces and Other from the 003 API (feature 005). Clustering already runs on the server via POST /api/cluster/runs (feature 004). Wire a single organize control on Home that calls that endpoint with the device Bearer token, then refreshes the directory so named workspace cards appear. Do not move clustering logic into the extension. Do not build the Side Panel, ⌘K, create-workspace, or a full suggestions UI—high-confidence apply from 004 is enough; low-confidence suggestions can stay server-side until 007. Keep the mock Home layout; only add the minimum chrome needed to start a run and show loading or failure.
 ```
 
 ---
@@ -173,7 +198,7 @@ Build the AI Browser Home view: the directory of all workspaces plus an Other bu
 
 **Out of scope:** Full chat/plan/action execution (008–010 can fill the shells), Home directory (005), ⌘K (011)
 
-**Depends on:** 002, 003 (004–005 preferred)  
+**Depends on:** 002, 003 (004–005 preferred; 005b preferred so Home already has named workspaces)  
 **Unblocks:** 008–010
 
 **Done when:** Opening a clustered tab shows the right workspace in the sidebar next to the page.
@@ -297,14 +322,14 @@ Add a fixed set of contextual workspace actions that actually execute via Gemini
 
 **Out of scope:** Arbitrary web automation, shopping checkout, voice (013)
 
-**Depends on:** 004, 005, 006, 007  
+**Depends on:** 004, 005, 005b, 006, 007  
 **Unblocks:** MVP complete
 
 **Done when:** User can trigger organize/create/cleanup via natural language and see Home and the sidebar update.
 
 **Specify prompt**
 ```text
-Add a global AI command bar (⌘K) as the natural-language control layer for AI Browser, powered by Gemini. It should work from Home and while a web page is open (extension overlay and/or sidebar). Users should be able to say things like organize my tabs, put related shopping/travel tabs together, create a workspace for these tabs, clean up my browser, show my workspaces, or what was I working on yesterday (using stored tab activity over time). The command bar orchestrates existing clustering and persistence; it is not a separate unconstrained agent. Voice input is a later feature.
+Add a global AI command bar (⌘K) as the natural-language control layer for AI Browser, powered by Gemini. It should work from Home and while a web page is open (extension overlay and/or sidebar). Users should be able to say things like organize my tabs, put related shopping/travel tabs together, create a workspace for these tabs, clean up my browser, show my workspaces, or what was I working on yesterday (using stored tab activity over time). Feature 005b already offers a one-click organize on Home via POST /api/cluster/runs; the command bar generalizes that and other intents—it is not a separate unconstrained agent. Voice input is a later feature.
 ```
 
 ---
@@ -375,13 +400,14 @@ Add a mobile companion that is a remote interface to the same persistent workspa
 001 foundation
  ├─ 002 extension ingest
  ├─ 003 persistence API
- │   ├─ 004 clustering
+ │   ├─ 004 clustering (server API)
  │   ├─ 005 Home (all workspaces)
- │   │   └─ 007 correction (Home drag + sidebar move-this-tab)
+ │   │   └─ 005b Home → run clustering (calls 004)
+ │   │       └─ 007 correction (Home drag + sidebar move-this-tab)
  │   └─ 006 Sidebar (in-tab workspace)
  │       ├─ 008 chat ─ 009 plan
  │       │         └─ 010 actions
- │       └─ 011 command bar (Home + browsing)
+ │       └─ 011 command bar (Home + browsing; generalizes 005b)
  └─ (after MVP) 012 → 013 ElevenLabs → 014 mobile
 ```
 

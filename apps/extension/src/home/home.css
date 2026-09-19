@@ -325,6 +325,44 @@ input:focus,
   align-self: center;
 }
 
+.organize-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+
+.organize-btn {
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+.organize-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.organize-status {
+  margin: 0;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 200;
+  letter-spacing: -0.01em;
+}
+
+.organize-status.is-failed,
+.organize-status.is-empty {
+  opacity: 0.92;
+}
+
 .wordmark-panel {
   grid-column: auto;
   grid-row: auto;

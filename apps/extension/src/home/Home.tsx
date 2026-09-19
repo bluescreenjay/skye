@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type DragEvent, type MouseEvent } from "react";
 import type { TabRef, Workspace } from "@ai-browser/shared";
-import { loadDirectory, moveTab, renameWorkspace } from "./api";
+import { loadDirectory, moveTab, renameWorkspace, runCluster } from "./api";
 import { composeDirectory, type HomeDirectory } from "./compose";
 import { markFromTab } from "./icons";
+import type { OrganizeStatus } from "./organize";
 import { loadWeatherPhrase } from "./weather";
 
 const ACTIONS = ["summarize", "collect refs", "new artifact"] as const;
@@ -48,12 +49,17 @@ export function Home() {
   const [weather, setWeather] = useState("checking");
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [organizeStatus, setOrganizeStatus] = useState<OrganizeStatus>("idle");
+  const [organizeMessage, setOrganizeMessage] = useState("");
+  const [directoryReady, setDirectoryReady] = useState(false);
   const ignoreClick = useRef(false);
   const dragId = useRef<string | null>(null);
+  const organizing = useRef(false);
 
   const refresh = useCallback(async () => {
     const { workspaces, tabRefs } = await loadDirectory();
     setDirectory(composeDirectory(workspaces, tabRefs));
+    setDirectoryReady(true);
   }, []);
 
   useEffect(() => {
@@ -63,6 +69,23 @@ export function Home() {
   useEffect(() => {
     void loadWeatherPhrase().then(setWeather);
   }, []);
+
+  const onOrganize = () => {
+    if (!directoryReady || organizing.current || organizeStatus === "running") return;
+    organizing.current = true;
+    setOrganizeStatus("running");
+    setOrganizeMessage("organizing…");
+    void (async () => {
+      try {
+        const outcome = await runCluster();
+        setOrganizeStatus(outcome.status);
+        setOrganizeMessage(outcome.message);
+        if (outcome.shouldRefresh) await refresh();
+      } finally {
+        organizing.current = false;
+      }
+    })();
+  };
 
   const afterDragClick = (event: { preventDefault(): void; stopPropagation(): void }): boolean => {
     if (!ignoreClick.current) return false;
@@ -198,6 +221,26 @@ export function Home() {
           <p className="wordmark">skye</p>
           <input className="url-bar" type="text" placeholder="url bar" spellCheck={false} autoComplete="off" />
           <p className="greeting">{greetingText(weather, directory.cards)}</p>
+        </div>
+        <div className="organize-row">
+          <button
+            type="button"
+            className="organize-btn"
+            disabled={!directoryReady || organizeStatus === "running"}
+            onClick={onOrganize}
+          >
+            organize
+          </button>
+          {organizeMessage ? (
+            <p
+              className={`organize-status${
+                organizeStatus === "failed" || organizeStatus === "empty" ? ` is-${organizeStatus}` : ""
+              }`}
+              role="status"
+            >
+              {organizeMessage}
+            </p>
+          ) : null}
         </div>
         {directory.cards.map((card) => (
           <WorkspaceCardView
