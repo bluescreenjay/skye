@@ -932,6 +932,42 @@ input:focus,
   font-weight: 200;
   color: var(--ink);
   line-height: 1.4;
+  /* replies are plain text: keep their line breaks, and never let a long word widen the card */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.chat-msg.is-skye .chat-who {
+  color: var(--accent);
+}
+
+.chat-note {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 200;
+  color: var(--ink-40);
+  text-transform: lowercase;
+}
+
+.chat-note.is-alert {
+  color: var(--accent);
+}
+
+.chat-retry {
+  margin-left: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--ink);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.ask:disabled {
+  opacity: 0.6;
 }
 
 .ask {

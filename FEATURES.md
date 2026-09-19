@@ -23,8 +23,8 @@ How to use: for each feature, run `/speckit-specify` and paste the **Specify pro
 | 006 | Chrome sidebar — in-tab workspace | P0 | ☐ |
 | 007 | Manual correction | P0 | ☐ |
 | 008 | Workspace AI chat | P0 | ☑ implemented (server side: the chat API; the sidebar chat panel is part of 006) |
-| 009 | Plan generation | P0 | ☐ |
-| 010 | Contextual actions | P0 | ☐ |
+| 009 | Plan generation | — | ✂ cut (its checklist is an output of the 010 agents) |
+| 010 | Workspace agents | P0 | ☐ |
 | 011 | Global command bar | P0 | ☐ |
 | 012 | Saved workspaces + soft suggestions | P1 | ☐ |
 | 013 | Desktop workspace voice (ElevenLabs) | P1 | ☐ |
@@ -124,7 +124,7 @@ Build the workspace persistence API for AI Browser on Tiger Data. Users need dur
 **Out of scope:** Embeddings, learning from corrections (store hooks OK), Home/Sidebar chrome (Home trigger is 005b; Side Panel is 006)
 
 **Depends on:** 002, 003  
-**Unblocks:** 005b, 006, 009, 011
+**Unblocks:** 005b, 006, 010, 011
 
 **Done when:** A messy tab set produces sensible named workspaces (or clear suggestions) without user labeling each tab.
 
@@ -147,7 +147,7 @@ Add AI clustering that turns a messy set of open tabs into named workspaces. Use
 - Rename and drag membership persist through the 003 API; real data only (empty chrome if unpaired)
 - Greeting with local time + weather (location when allowed)
 
-**Out of scope:** Chrome Side Panel (006), `chrome_url_overrides` / new-tab takeover, create-workspace control (007), triggering clustering (005b), live chat/plan/actions (008–010), ⌘K (011), dummy seed workspaces
+**Out of scope:** Chrome Side Panel (006), `chrome_url_overrides` / new-tab takeover, create-workspace control (007), triggering clustering (005b), live chat and agents (008, 010), ⌘K (011), dummy seed workspaces
 
 **Depends on:** 003 (004 preferred for demo data)  
 **Unblocks:** 005b, 007, 011
@@ -191,12 +191,12 @@ Add a thin Home trigger for AI Browser clustering. Home already lists workspaces
 
 **In scope**
 - Chrome Side Panel bound to the active tab
-- Show the workspace that tab belongs to (or Other), related tabs, and shells for plan, actions, and chat
+- Show the workspace that tab belongs to (or Other), related tabs, and shells for agents and chat
 - Switching tabs retargets the sidebar to that tab’s workspace
 - Stay on the page; do not force navigation to Home
 - Opening/closing the sidebar does not destroy workspace data
 
-**Out of scope:** Full chat/plan/action execution (008–010 can fill the shells), Home directory (005), ⌘K (011)
+**Out of scope:** Full chat and agent execution (008 and 010 can fill the shells), Home directory (005), ⌘K (011)
 
 **Depends on:** 002, 003 (004–005 preferred; 005b preferred so Home already has named workspaces)  
 **Unblocks:** 008–010
@@ -248,7 +248,7 @@ Add manual workspace correction across both views. On Home, users drag tabs betw
 **Out of scope:** Global browser commands (011), multi-workspace agents, voice (013)
 
 **Depends on:** 003, 006  
-**Unblocks:** 009, 010
+**Unblocks:** 010
 
 **Done when:** User asks in the sidebar about this tab’s workspace and gets answers that reference its tabs without re-explaining.
 
@@ -259,53 +259,34 @@ Add per-workspace AI chat powered by the Gemini API, in the Chrome sidebar. Each
 
 ---
 
-### 009 — Plan generation
+### 009 — Plan generation (cut)
 
-**What:** Lightweight checklist plans in the sidebar, derived from workspace activity (Gemini).
-
-**In scope**
-- Generate a short plan/checklist from workspace context
-- Show checklist in the **Sidebar**; mark items done/undone
-- Home MAY show a compact plan preview; Sidebar is source of interaction
-- Update plan via chat (“make me a plan”, “update my plan”)
-- Keep plans lightweight—not a full project-management product
-
-**Out of scope:** Assignees, due dates, Gantt, external PM sync
-
-**Depends on:** 006, 008  
-**Unblocks:** stronger demo narrative
-
-**Done when:** Opening a tab in a clustered workspace shows a sensible checklist in the sidebar that the user can tick and refresh.
-
-**Specify prompt**
-```text
-Add lightweight workspace plan generation using Gemini, shown in the Chrome sidebar next to the page. From a workspace’s tabs and activity, the AI creates a short checklist of next steps (not a full project-management system). Users can mark items complete and ask chat to create or update the plan. Home may preview the plan; the sidebar is where you work it. Plans are dynamic and durable with the workspace.
-```
+**Cut.** A separate plan checklist overlapped with the workspace agents (010). Its useful piece, a short tickable checklist, is now the output of one 010 agent ("next steps"), saved in the existing plan items so chat can see it. The number is kept so existing spec folders do not move.
 
 ---
 
-### 010 — Contextual actions
+### 010 — Workspace agents
 
-**What:** Gemini tool-calling actions that run from the sidebar and write results into the workspace.
+**What:** A fixed list of workspace "agents" on each expanded Home card. Each agent is a one-shot tool: it reads the workspace's context (and, where allowed, the pages of its tabs) and produces a real, saved result shown right under the agent. This replaces the earlier plan checklist (009) and the actions and artifacts stubs on the Home card.
 
-**In scope** (pick ~3–5 that demo well)
-- Summarize workspace sources (strong Gemini prize demo: papers/docs)
-- Compare tabs/options
-- Create a document from research
-- Create tasks (can feed plan items)
-- Store action runs (input/output/status) on the workspace
-- Trigger from the **Sidebar** while looking at the page
+**In scope** (pick ~5 that demo well)
+- The agent list in the expanded Home card, laid out as tabs | chat | agents (it replaces the action buttons and the artifacts column from 005)
+- Each agent row: name, one-line description, a run control, its status, and its latest result inline; older runs can be expanded
+- Starter set: summarize sources, compare options, what's missing, next steps (a tickable checklist saved as plan items, so chat sees it), collect refs (key quotes with their links)
+- A server-side "read the page" step that fetches the public https pages of the workspace's tabs, for richer text than the stored excerpt. It must be safe by design: no private or local addresses, size and time limits, and fetched text treated as untrusted data
+- Store every run (input, output, status) as an action run on the workspace
+- A fixed catalog only: "agent" is the interface word for a one-shot tool, not an autonomous program
 
-**Out of scope:** MCP marketplace, dynamic action discovery, computer-use, calendar integrations (stretch)
+**Out of scope:** user-defined or custom agents, multi-step or autonomous agents, MCP, computer-use, login-walled pages and PDFs, calendar integrations (stretch), a separate plan feature (009 is cut), and sidebar placement (006 reuses the component later)
 
-**Depends on:** 008 (006 minimum)  
-**Unblocks:** demo “agent” feel without agents
+**Depends on:** 005, 008 (uses the shared AI layer and the workspace context from chat)  
+**Unblocks:** 011 (the command bar can run agents), the sidebar agent list (006)
 
-**Done when:** Clicking an action in the sidebar produces a visible real result (not a placeholder toast).
+**Done when:** Clicking an agent on an expanded Home card produces a visible real result under it that is still there after a reload, and ticks on the "next steps" checklist persist and show up in chat answers.
 
 **Specify prompt**
 ```text
-Add a fixed set of contextual workspace actions that actually execute via Gemini tool-calling from the Chrome sidebar. Include roughly three to five reliable actions such as summarize sources (including dense research pages), compare open options/tabs, create a research document, and create tasks/plan items. The user stays on the web page; results land in the workspace and show in the sidebar. Use simple tools against workspace context—no computer-use agents and no MCP requirement. Prefer least-power implementations that work in a live demo.
+Add a fixed list of workspace agents to each expanded card on Home, laid out as tabs | chat | agents (replacing the current action buttons and artifacts column). Each agent is a one-shot tool, not an autonomous program: it runs against the workspace's context and saves a real result that appears right under the agent, with older runs available to expand. Include roughly five reliable agents: summarize sources, compare options, what's missing, next steps (a checklist the user can tick, saved so the workspace chat can see it), and collect refs (key quotes with links). Agents may read the actual pages of the workspace's public https tabs on the server for richer text than the stored excerpt; this must be safe (no private or local addresses, size and time limits) and fetched page text must be treated as untrusted data, never instructions. The provider is configurable behind one interface (VT ARC by default, Gemini as backup) and every model call is triggered only by the user pressing an agent. No custom or multi-step agents, no MCP, no computer-use. It must be fully testable without any UI, like features 003, 004, and 008; the sidebar will reuse the same list later.
 ```
 
 ---
@@ -405,8 +386,7 @@ Add a mobile companion that is a remote interface to the same persistent workspa
  │   │   └─ 005b Home → run clustering (calls 004)
  │   │       └─ 007 correction (Home drag + sidebar move-this-tab)
  │   └─ 006 Sidebar (in-tab workspace)
- │       ├─ 008 chat ─ 009 plan
- │       │         └─ 010 actions
+ │       ├─ 008 chat ─ 010 agents (Home card first; 009 plan cut, folded into 010)
  │       └─ 011 command bar (Home + browsing; generalizes 005b)
  └─ (after MVP) 012 → 013 ElevenLabs → 014 mobile
 ```

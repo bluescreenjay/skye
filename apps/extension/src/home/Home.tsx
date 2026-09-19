@@ -5,6 +5,7 @@ import { composeDirectory, type HomeDirectory } from "./compose";
 import { markFromTab } from "./icons";
 import type { OrganizeStatus } from "./organize";
 import { loadWeatherPhrase } from "./weather";
+import { WorkspaceChat } from "./WorkspaceChat";
 
 const ACTIONS = ["summarize", "collect refs", "new artifact"] as const;
 
@@ -348,19 +349,7 @@ function WorkspaceCardView({
                 </button>
               ))}
             </div>
-            <div className="chat">
-              <div className="chat-log">
-                <div className="chat-empty">nothing asked yet</div>
-              </div>
-              <input
-                className="ask"
-                type="text"
-                placeholder="ask the workspace anything"
-                spellCheck={false}
-                autoComplete="off"
-                onClick={(event) => event.stopPropagation()}
-              />
-            </div>
+            <WorkspaceChat workspaceId={card.workspace.id} />
           </div>
           <div className="band band-artifacts">
             <div className="empty">no artifacts yet</div>

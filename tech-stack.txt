@@ -144,11 +144,11 @@ FEATURE SPLIT (SpecKit-sized, dependency order)
 008  Workspace AI chat (Gemini, sidebar)
      Per-workspace context from tabs/snippets; Q&A without re-explaining
 
-009  Plan generation (Gemini, sidebar)
-     Checklist from activity; update/complete via chat
+009  (cut) Plan generation
+     Folded into 010: the checklist is one agent's output, saved as plan items
 
-010  Contextual actions (Gemini tools, sidebar)
-     e.g. Summarize, Compare tabs, Create doc, Create tasks — real exec
+010  Workspace agents (Home card first; fixed one-shot tools)
+     e.g. Summarize, Compare, What's missing, Next steps (checklist), Collect refs — real exec
 
 011  Global command bar (⌘K, Gemini)
      Home + browsing: "Organize my tabs", "Create workspace for these"

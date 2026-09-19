@@ -1,11 +1,20 @@
 <!--
 Sync Impact Report
-- Version change: 1.2.0 → 1.3.0
-- Modified principles: II renamed/expanded (extension presents Home + Sidebar; server still decides)
-- Added principles: VII. Two Surfaces — Home and Sidebar
-- Added sections: Two UI Surfaces under Technology Stack
+- Version change: 1.3.0 → 1.4.0 (MINOR: MVP loop and feature scope materially changed; no principle removed or redefined)
+- Date: 2026-09-19
+- Change: feature 009 (Plan generation) is CUT and folded into feature 010, now "Workspace agents".
+- Modified principles:
+  - I. Workspace-First: workspace memory lists plan items (checklists) and available agents instead of "plan ... available actions"
+  - II. Extension Observes and Presents; Server Decides: the server owns plan items and agent execution
+  - IV. Least-Power Actions: one clarifying sentence that "agents" in the interface means a fixed catalog of one-shot tools
+  - VI. Demo-Hard, Architecture-Soft: MVP loop is now "... chat → agents → global command bar (⌘K)"
+  - VII. Two Surfaces: the sidebar shows agents and chat (no separate plan)
+- Added principles: none
+- Added sections: none
 - Removed sections: none
-- Feature order: 005 Home, 006 Sidebar; P0 cut line 001–011
+- Feature order: 9 Plan generation is cut (folded into 10); 10 is "Workspace agents (Home card first; sidebar reuses)". Numbers unchanged.
+- Kept: PlanItem type and plan items table (the "next steps" agent stores its checklist there so chat can see it).
+- Dependent files updated outside this command: FEATURES.md, tech-stack.txt
 - Follow-up TODOs: none
 -->
 # AI Browser Constitution
@@ -18,7 +27,8 @@ The fundamental unit of the product is the **workspace**, not the tab.
 
 - Tabs, URLs, and page snippets are inputs that feed a workspace.
 - A workspace MUST own persistent memory: tabs refs, AI context, conversation
-  history, plan, notes, generated content, and available actions.
+  history, plan items (checklists), notes, generated content, and available
+  agents.
 - Closing tabs or the browser MUST NOT destroy a workspace.
 - Features MUST be designed around workspace continuity, not page chrome.
 
@@ -34,7 +44,7 @@ hosts the two product UIs. The server owns intelligence and storage.
   change events, applying workspace assignments (move/group tabs), the Home
   view, and the Side Panel on web pages.
 - The server/app (Next.js + the primary Postgres store) MUST own: clustering,
-  workspace CRUD, AI context, plans, chat, and action execution.
+  workspace CRUD, AI context, plan items, chat, and agent execution.
 - Clients MUST NOT each invent independent clustering or conflicting workspace IDs.
 - Long-term Chromium-fork ambitions MUST NOT block the extension + server MVP.
 
@@ -66,6 +76,10 @@ Prefer the simplest execution mechanism that fulfills an action.
 - MCP servers and multi-step specialized agents are OPTIONAL stretch only;
   interfaces MAY be stubbed, but MUST NOT gate the demo.
 - Dynamic action discovery is a long-term goal, not an MVP requirement.
+- "Agents" in the product interface means a fixed catalog of one-shot tools
+  (hard-coded tools plus LLM calls against workspace context), which is what
+  this principle already requires; multi-step or autonomous agents remain
+  optional stretch and MUST NOT gate the demo.
 
 **Rationale**: Spec §25; least complex path keeps the hackathon demo reliable.
 
@@ -90,7 +104,7 @@ Ship the core product loop before polish, stretch platforms, or premature
 abstraction.
 
 - MVP MUST prove: ingest → cluster → persist → Home directory → Sidebar on a
-  tab → correct → chat → plan → actions → global command bar (⌘K).
+  tab → correct → chat → agents → global command bar (⌘K).
 - Desktop voice (ElevenLabs), saved-workspace polish, and embeddings are P1.
   Mobile companion remains stretch. None of these MAY delay P0.
 - Prize-oriented vendors (Gemini, Tiger Data, ElevenLabs, Vultr, GoDaddy) are
@@ -112,7 +126,7 @@ workspaces at different zoom levels.
   view (Chrome new-tab / extension home). Users go here to see the forest,
   open a workspace overview, and reorganize tabs across workspaces.
 - **Sidebar** is the in-tab workspace: when the user is on a web page, the
-  Chrome Side Panel shows that tab's workspace plus plan, actions, chat, and
+  Chrome Side Panel shows that tab's workspace plus its agents, chat, and
   related tabs. Users stay on the page; the workspace comes to them.
 - Switching tabs MUST retarget the sidebar to the active tab's workspace
   (or Other if unassigned). Closing the sidebar MUST NOT destroy the workspace.
@@ -155,7 +169,7 @@ A full AI-native Chromium browser is explicitly out of MVP scope.
 | Surface | Host | Shows |
 | --- | --- | --- |
 | Home | Extension new-tab / home page | All workspaces, Other, cross-workspace layout |
-| Sidebar | Chrome Side Panel on a web tab | Active tab's workspace, related tabs, plan, actions, chat |
+| Sidebar | Chrome Side Panel on a web tab | Active tab's workspace, related tabs, agents, chat |
 
 The Next.js app is the API (and may reuse Home components). It is not the
 primary in-tab workspace UI.
@@ -178,8 +192,8 @@ Every durable row MUST be user-scoped from day one.
 6. Chrome sidebar — in-tab workspace
 7. Manual correction (+ Chrome sync of moves)
 8. Workspace AI chat (sidebar)
-9. Plan generation (sidebar)
-10. Contextual actions (sidebar)
+9. Plan generation — CUT (folded into 10)
+10. Workspace agents (Home card first; sidebar reuses)
 11. Global command bar (⌘K)
 12. (P1) Saved workspaces + soft suggestions
 13. (P1) Desktop workspace voice (ElevenLabs)
@@ -206,4 +220,4 @@ what we build.
   feature plan with rationale and a path back to compliance.
 - Complexity beyond the MVP cut line MUST be justified against Principle VI.
 
-**Version**: 1.3.0 | **Ratified**: 2026-09-19 | **Last Amended**: 2026-09-19
+**Version**: 1.4.0 | **Ratified**: 2026-09-19 | **Last Amended**: 2026-09-19
