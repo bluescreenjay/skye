@@ -40,7 +40,6 @@ describe("the extension only observes: no call can change the browser's tabs or 
 
   it.each(forbidden.map((re) => [String(re), re] as const))("no source file matches %s", (_name, re) => {
     for (const file of files) {
-      // Side Panel enable/disable for Home vs web pages lives in the gate module.
       if (re.source.includes("sidePanel") && file.endsWith("sidepanel-gate.ts")) continue;
       const text = readFileSync(file, "utf8");
       expect(text, file).not.toMatch(re);

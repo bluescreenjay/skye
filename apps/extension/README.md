@@ -24,13 +24,17 @@ Activating Home (or the panel's **home** control) closes the Side Panel; it stay
 while Home is the active tab.
 
 The panel chrome follows `design_mockup/` (home control, wordmark, address, member list,
-dock) with Home's accent/type tokens. The panel uses the same `VITE_API_BASE_URL` and
-`VITE_DEVICE_TOKEN` as Home. If pairing or the server is unavailable, it shows a quiet
-status rather than another tab's workspace.
+dock) with Home's accent/type tokens. From the Side Panel you can move the active page to
+another workspace or dismiss it to Other; both call the same membership PATCH as Home.
+Plan, suggested-action, and chat areas remain placeholders until later features. The
+panel uses the same `VITE_API_BASE_URL` and `VITE_DEVICE_TOKEN` as Home. If pairing or the
+server is unavailable, it shows a quiet status rather than another tab's workspace.
 
 Layout matches `specs/005-home-all-workspaces/mocks/home-design-prototype/` (Home view only):
 photo, rail, “skye”, url field, greeting, workspace cards. Other tabs are rail-top icons, never
-a named “other” card. There is no create-workspace control and no dummy seed data.
+a named “other” card. There is no create-workspace control and no Chrome tab-group sync
+(those are stretch — see FEATURES). Drag a tab onto another workspace (or Other) to move it;
+renaming a card title updates the workspace name via the API.
 
 **Organize** (feature 005b) posts to `POST /api/cluster/runs` with the same device token, then
 reloads workspaces and tab-refs so new groups appear. Home never invents workspace names or runs

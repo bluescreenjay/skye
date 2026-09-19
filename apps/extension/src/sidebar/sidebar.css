@@ -34,7 +34,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font-family: inherit;
   color: inherit;
 }
@@ -128,6 +129,76 @@ input:focus {
 .panel-url::placeholder {
   color: var(--ink-40);
   text-transform: lowercase;
+}
+
+.panel-move {
+  flex: 0 0 auto;
+  padding: 0 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.panel-move-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--accent);
+}
+
+.panel-move-select {
+  width: 100%;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--accent-20);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--ink);
+  text-transform: lowercase;
+  cursor: pointer;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--accent) 50%),
+    linear-gradient(135deg, var(--accent) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 55%,
+    calc(100% - 10px) 55%;
+  background-size:
+    4px 4px,
+    4px 4px;
+  background-repeat: no-repeat;
+}
+
+.panel-move-select:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.panel-move-select:focus {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.panel-dismiss {
+  align-self: flex-start;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 300;
+  color: var(--ink);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.panel-dismiss:disabled {
+  opacity: 0.55;
+  cursor: default;
 }
 
 .panel-tabs {

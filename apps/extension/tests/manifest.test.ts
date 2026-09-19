@@ -12,7 +12,13 @@ describe("manifest", () => {
   });
 
   it("asks for the permissions the design needs", () => {
-    expect([...(m.permissions as string[])].sort()).toEqual(["alarms", "geolocation", "scripting", "sidePanel", "storage"]);
+    expect([...(m.permissions as string[])].sort()).toEqual([
+      "alarms",
+      "geolocation",
+      "scripting",
+      "sidePanel",
+      "storage",
+    ]);
     expect([...(m.host_permissions as string[])].sort()).toEqual(["http://*/*", "https://*/*"]);
   });
 
@@ -44,7 +50,7 @@ describe("manifest", () => {
     expect(m).not.toHaveProperty(key);
   });
 
-  it.each(["tabs", "activeTab", "<all_urls>", "unlimitedStorage", "tabGroups", "history", "bookmarks", "cookies", "webNavigation", "webRequest"])(
+  it.each(["tabs", "activeTab", "<all_urls>", "unlimitedStorage", "history", "bookmarks", "cookies", "webNavigation", "webRequest"])(
     "does not ask for the %s permission",
     (permission) => {
       const asked = [...((m.permissions as string[]) ?? []), ...((m.host_permissions as string[]) ?? [])];

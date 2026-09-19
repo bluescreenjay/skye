@@ -1,5 +1,10 @@
 import type { TabRef, Workspace } from "@ai-browser/shared";
 import { loadConfig } from "../config";
+import {
+  createWorkspace as createWorkspaceWrite,
+  moveTab as moveTabWrite,
+  renameWorkspace as renameWorkspaceWrite,
+} from "../corrections/api";
 import { mapClusterHttpResult, type OrganizeOutcome } from "./organize";
 
 function authHeaders(token: string): HeadersInit {
@@ -46,39 +51,18 @@ export async function loadDirectory(): Promise<{ workspaces: Workspace[]; tabRef
 }
 
 export async function renameWorkspace(id: string, name: string): Promise<Workspace | null> {
-  const result = loadConfig(import.meta.env);
-  if (!result.ok) return null;
-
-  try {
-    const response = await fetch(`${result.config.apiBaseUrl}/api/workspaces/${id}`, {
-      method: "PATCH",
-      headers: authHeaders(result.config.deviceToken),
-      body: JSON.stringify({ name }),
-    });
-    if (!response.ok) return null;
-    const body = await readJson<{ workspace?: Workspace }>(response);
-    return body?.workspace ?? null;
-  } catch {
-    return null;
-  }
+  const result = await renameWorkspaceWrite(id, name);
+  return result.ok ? result.value : null;
 }
 
 export async function moveTab(id: string, workspaceId: string | null): Promise<TabRef | null> {
-  const result = loadConfig(import.meta.env);
-  if (!result.ok) return null;
+  const result = await moveTabWrite(id, workspaceId);
+  return result.ok ? result.value : null;
+}
 
-  try {
-    const response = await fetch(`${result.config.apiBaseUrl}/api/tab-refs/${id}`, {
-      method: "PATCH",
-      headers: authHeaders(result.config.deviceToken),
-      body: JSON.stringify({ workspaceId }),
-    });
-    if (!response.ok) return null;
-    const body = await readJson<{ tabRef?: TabRef }>(response);
-    return body?.tabRef ?? null;
-  } catch {
-    return null;
-  }
+export async function createWorkspace(name: string, emoji?: string | null): Promise<Workspace | null> {
+  const result = await createWorkspaceWrite(name, emoji);
+  return result.ok ? result.value : null;
 }
 
 /** POST /api/cluster/runs then map to Home organize outcome. Does not invent directory rows. */
