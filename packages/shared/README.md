@@ -22,6 +22,22 @@ Every durable entity except `User` carries `userId`.
 
 Names are camelCase in TypeScript and snake_case in SQL (`userId` ↔ `user_id`).
 
+## Ingest types (feature 002)
+
+[`src/ingest.ts`](./src/ingest.ts) holds the wire types the tab-ingestion extension sends
+and the future API receives. They are derived from `TabRef` and `TabEvent` with `Pick`, so
+there is no second definition of those entities.
+
+| Export | What it is |
+| --- | --- |
+| `TabSnapshotInput` | One tab's current state: address, title, snippet, `chromeTabId`, `windowId`, `active`. |
+| `TabEventInput` | One timestamped tab event with a client-generated id (`opened`, `updated`, `activated`, `closed`). |
+| `IngestBatchRequest` / `IngestBatchResponse` | The request and response for `POST /api/ingest/tabs`. |
+| `IngestActiveTab`, `IngestEventType` | Supporting types. |
+| `SNIPPET_MAX_LENGTH` | Snippet size limit (2000 characters). |
+
+The HTTP contract is in `specs/002-tab-ingestion-extension/contracts/ingest-api.md`.
+
 ## Commands
 
 ```bash
