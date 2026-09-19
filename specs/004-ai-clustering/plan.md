@@ -6,7 +6,7 @@
 
 ## Summary
 
-Add server-side clustering to `apps/web`: on request, read the user's unplaced tabs (Other, never placed), ask Gemini to group them by title, URL, and snippet, then either apply confident groups (creating or reusing workspaces) or store uncertain ones as suggestions the user can accept or ignore. Every AI placement is marked `ai`, recorded per run, and undoable; user placements always win. Three new tables (`cluster_runs`, `cluster_run_moves`, `suggestions`) and one new `tab_refs` column (`placement_source`) go in a new idempotent migration. Shared types gain `PlacementSource`, `ClusterRun`, `Suggestion`, and friends. The Gemini call sits behind a one-file vendor client in a shared `src/llm/` module (with an in-memory daily call budget, research §18) that later AI features (008–011) reuse, plus a thin `ClusterModel` layer, so a vendor pivot touches one file. No UI, no embeddings, no extension changes.
+Add server-side clustering to `apps/web`: on request, read the user's unplaced tabs (Other, never placed), ask an LLM to group them by title, URL, and snippet, then either apply confident groups (creating or reusing workspaces) or store uncertain ones as suggestions the user can accept or ignore. Every AI placement is marked `ai`, recorded per run, and undoable; user placements always win. Three new tables (`cluster_runs`, `cluster_run_moves`, `suggestions`) and one new `tab_refs` column (`placement_source`) go in a new idempotent migration. Shared types gain `PlacementSource`, `ClusterRun`, `Suggestion`, and friends. The model call goes through a shared `src/llm/` module that picks one provider per deployment: the **VT ARC LLM API by default** (OpenAI-compatible, `gpt-oss-120b`) with **Gemini as the selectable backup**, plus an in-memory daily call budget and a local concurrency limiter (research sections 18 and 19). Later AI features (008 to 011) reuse it, and a further provider is one more file. No UI, no embeddings, no extension changes.
 
 Design detail: [research.md](./research.md), [data-model.md](./data-model.md), [contracts/](./contracts/), validation: [quickstart.md](./quickstart.md).
 
@@ -14,7 +14,7 @@ Design detail: [research.md](./research.md), [data-model.md](./data-model.md), [
 
 **Language/Version**: TypeScript 5.x, Node 22, Next.js 16 App Router (`apps/web`). `apps/web/AGENTS.md` warns Next 16 differs from older versions: read `apps/web/node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/route.md` (and the route-segment-config docs for `maxDuration`) before writing route handlers.
 
-**Primary Dependencies**: `@ai-browser/shared`; `pg`; Node `crypto` (fingerprints); `fetch` for the Gemini REST API. **No new runtime dependency.** Dev: existing Vitest + PGlite.
+**Primary Dependencies**: `@ai-browser/shared`; `pg`; Node `crypto` (fingerprints); `fetch` for the providers' REST APIs. **No new runtime dependency.** Dev: existing Vitest + PGlite.
 
 **Storage**: Existing Postgres (Tiger preferred). New migration `packages/shared/sql/004_clustering.sql` (idempotent). `001_init.sql` is not edited.
 
@@ -24,7 +24,7 @@ Design detail: [research.md](./research.md), [data-model.md](./data-model.md), [
 
 **Project Type**: Web API in the existing monorepo app `apps/web`, consumed later by Home (005) and the sidebar (006).
 
-**Performance Goals**: A run over up to 50 tabs answers in under 30 s for 90% of runs (SC-006). Measured on 2026-09-19: `gemini-3.5-flash-lite` answered 8 tabs in about 1.2 s. 50–100 tabs is verified by quickstart V9.
+**Performance Goals**: A run over up to 50 tabs answers in under 30 s for 90% of runs (SC-006). Measured on 2026-09-19: `gemini-3.5-flash-lite` answered 8 tabs in about 1.2 s. Through the finished code, default VT provider: 30 tabs 100% in 4.1 s and 50 tabs in 5.2 s; Gemini backup 100% in 1.4 s. 50–100 tabs is verified by quickstart V9.
 
 **Constraints**: Every query filters by `user_id`. No DB transaction is held during the model call. Model key is server-only. Logs carry counts and ids only, never tab text or model output. One total 25 s model deadline (call plus retry). One running run per user. Every model request is metered (in-memory daily counter, default cap 450 under the free tier's 500) and a 429 is never retried (research §18).
 
@@ -47,6 +47,8 @@ Design detail: [research.md](./research.md), [data-model.md](./data-model.md), [
 | Persistence: user-scoped rows | PASS with note | All new rows carry `user_id` with composite foreign keys, except the member-id array on `suggestions` (see Complexity Tracking). |
 
 **Gate result: PASS** (before and after Phase 1 design).
+
+**Stack pivot (2026-09-19, user decision; constitution "Pivot rule").** The stack table lists Gemini as the preferred AI vendor. Its free tier (15 requests a minute, 500 a day, shared with a teammate and demo viewers) made it a bottleneck, so the **default provider is now the VT ARC LLM API** (OpenAI-compatible, on-premises) with **Gemini kept as the selectable backup** (`LLM_PROVIDER=gemini`). Exactly one provider is active per deployment (no dual-running). Shared types and the HTTP contract are unchanged, so the swap is config plus one module. Costs and constraints: the VT endpoint is reachable only on the VT VPN, needs a personal VT key, and enforces concurrency by rejection (research section 19).
 
 ## Project Structure
 
@@ -91,7 +93,11 @@ apps/web/
 │   ├── llm/                            # NEW: shared by every AI feature (004, 008–011)
 │   │   ├── errors.ts                   # ModelError, ModelUnconfiguredError, BudgetExceededError
 │   │   ├── budget.ts                   # in-memory daily call counter (research §18)
-│   │   └── gemini.ts                   # the only vendor-specific file
+│   │   ├── types.ts                    # GenerateJsonOptions, Provider, deadline, wait
+│   │   ├── limiter.ts                  # local per-model-family concurrency limiter
+│   │   ├── index.ts                    # picks the provider (LLM_PROVIDER); the entry point features call
+│   │   ├── openai-compat.ts            # VT ARC LLM API (default): OpenAI-compatible
+│   │   └── gemini.ts                   # Gemini (backup); translates the canonical schema
 │   └── cluster/
 │       ├── model.ts                    # ClusterModel interface, getModel(), test seam (built on ../llm)
 │       ├── prompt.ts                   # request building (caps, URL stripping, short ids) + answer validation
@@ -110,15 +116,16 @@ apps/web/
     ├── cluster-prompt.test.ts          # NEW: caps, URL stripping, validation rules
     ├── cluster.test.ts                 # NEW: apply, suggest, existing-workspace, undo, races, repeat, isolation, failures
     ├── cluster-helpers.ts              # NEW: fake model, seeding helpers
-    ├── cluster-live.test.ts            # NEW: opt-in (CLUSTER_LIVE=1) real-Gemini score of the fixture, on PGlite
+    ├── cluster-live.test.ts            # NEW: opt-in (CLUSTER_LIVE=1) real-provider score of the fixture, on PGlite
+    ├── llm.test.ts, llm-vt.test.ts, llm-limiter.test.ts, llm-dispatch.test.ts   # NEW: budget, both providers, limiter, provider choice, schema translation
     ├── existing-routes.test.ts         # CHANGE: placementSource cases
     └── fixtures/mixed-tabs.batch.json, mixed-tabs-50.batch.json, mixed-tabs.labels.json   # NEW: 30-tab set (with an ambiguous group), 50-tab timing set, answer key
 
-.env.example                            # CHANGE: GEMINI_MODEL, CLUSTER_CONFIDENCE_BAR, LLM_DAILY_CAP
+.env.example                            # CHANGE: LLM_PROVIDER, VT_LLM_API_KEY, LLM_MODEL*, LLM_CONCURRENCY, GEMINI_*, CLUSTER_CONFIDENCE_BAR, LLM_DAILY_CAP
 specs/003-workspace-persistence-api/contracts/http.md   # CHANGE: note placementSource and the write-side effect
 ```
 
-**Structure Decision**: Everything stays inside `apps/web` and `packages/shared`; no new package and no extension change. Vendor code is isolated in `llm/gemini.ts` (shared with the later AI features) so a pivot is one file plus config. Pure logic (`prompt.ts`, `fingerprint.ts`) is separate from database code so it is testable without Postgres.
+**Structure Decision**: Everything stays inside `apps/web` and `packages/shared`; no new package and no extension change. Vendor code is isolated in the provider files under `llm/` (`openai-compat.ts`, `gemini.ts`) so a pivot is one file plus config. Pure logic (`prompt.ts`, `fingerprint.ts`) is separate from database code so it is testable without Postgres.
 
 ## Cross-feature changes (flagged)
 
@@ -143,6 +150,9 @@ This feature edits files owned by earlier features. All changes are additive and
 
 - **Model self-confidence is uncalibrated.** Mitigation: a bar of 0.7 (chosen from live results, see research section 5), the live fixture score (SC-001) and suggestion-vs-apply counts tune it; the bar is env-overridable.
 - **The free quota is small and shared** (about 500 requests a day per model, one key for the developer, a teammate, and demo viewers). Mitigation: user-initiated calls only, one request per action, skip-if-unchanged, an in-memory daily meter, never retrying 429, and separate model ids per purpose (research §18).
+- **The default provider needs the VT VPN.** Off it every call fails with a clear message and changes nothing. Mitigation: `LLM_PROVIDER=gemini` is a one-line switch back; test from the network you will demo on; a hosted deployment cannot reach it.
+- **Concurrency is enforced by rejection** (10 per model, measured). Mitigation: a local limiter with headroom, and a retry with backoff on the 400 "concurrent session limit reached".
+- **The VT service is for VT people with a personal key**, and logs interactions. A teammate needs their own key or Gemini.
 - **Model ids are retired quickly** (`gemini-2.5-flash` already 404s for new users). Mitigation: pinned default that was called successfully, a clear 404 error naming the id, env override.
 - **Latency at 50–100 tabs is unmeasured.** Mitigation: minimal thinking, 25 s timeout, quickstart V9; lower the per-run cap if needed.
 - **Snippets can hold sensitive text.** Same known limitation as 002 (no per-site exclusion list); URLs are stripped of query strings and snippets are cut to 600 characters before leaving the server.

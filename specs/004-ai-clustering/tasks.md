@@ -12,6 +12,8 @@ description: "Task list for 004 AI Clustering"
 
 **Organization**: Grouped by user story from spec.md (US1–US5). US1–US4 are P1 and US5 is P2.
 
+**Change after implementation (2026-09-19):** the AI provider became configurable: the VT ARC LLM API is the default and Gemini the selectable backup. `llm/gemini.ts` (T010) is now one of two providers behind `llm/index.ts`, alongside `llm/openai-compat.ts` and `llm/limiter.ts`. See research section 19 and the plan's "Stack pivot" note. The tasks below are otherwise unchanged.
+
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: can run in parallel (different files, no dependency on an unfinished task)

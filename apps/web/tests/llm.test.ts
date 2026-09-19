@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_DAILY_CAP, dailyCap, resetForTests, SHARES, spend, SPILL_OVER, usage } from "@/src/llm/budget";
 import { BudgetExceededError, ModelError, ModelUnconfiguredError } from "@/src/llm/errors";
-import { DEFAULT_MODEL, generateJson, modelFor } from "@/src/llm/gemini";
+import { DEFAULT_MODEL, geminiGenerateJson as generateJson, geminiModelFor as modelFor } from "@/src/llm/gemini";
 
 const SCHEMA = { type: "OBJECT", properties: {}, required: [] };
 const ok = (obj: unknown) =>
@@ -57,7 +57,7 @@ describe("daily AI-call budget (research section 18)", () => {
   });
 });
 
-describe("Gemini client (llm/gemini.ts)", () => {
+describe("Gemini backup provider (llm/gemini.ts)", () => {
   const call = (fetchImpl: typeof fetch, extra: Record<string, unknown> = {}) =>
     generateJson({ purpose: "cluster", prompt: "p", schema: SCHEMA, fetchImpl, sleep: async () => undefined, ...extra });
 

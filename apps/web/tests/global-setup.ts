@@ -23,8 +23,8 @@ function freePort(): Promise<number> {
  * Starts a throwaway Postgres with the real 001 and 004 schemas and points the app at it.
  * DATABASE_URL is set explicitly, and src/db.ts never overrides a variable that is
  * already set, so these tests cannot reach a real database or read one from .env.
- * The same goes for the AI key: it is blanked unless CLUSTER_LIVE=1, so no test can
- * call the real model (and spend the daily quota) by accident.
+ * The same goes for the AI keys (VT and Gemini): they are blanked unless CLUSTER_LIVE=1,
+ * so no test can call a real model (and use shared quota) by accident.
  */
 export default async function setup() {
   const db = await PGlite.create();
@@ -35,7 +35,9 @@ export default async function setup() {
 
   process.env.DATABASE_URL = `postgres://postgres:postgres@127.0.0.1:${port}/postgres?sslmode=disable`;
   process.env.DEVICE_TOKEN_SECRET = "test-only-secret";
-  if (process.env.CLUSTER_LIVE !== "1") process.env.GEMINI_API_KEY = "";
+  if (process.env.CLUSTER_LIVE !== "1") {
+    for (const name of ["VT_LLM_API_KEY", "LLM_API_KEY", "GEMINI_API_KEY"]) process.env[name] = "";
+  }
 
   return async () => {
     await server.stop();

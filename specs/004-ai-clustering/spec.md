@@ -165,7 +165,7 @@ Home shows every workspace and any pending suggestions. The sidebar, on a given 
 ## Assumptions
 
 - Features 001 (shared model), 002 (tab ingestion), and 003 (workspace persistence and receiving 002's tab feed) exist. Stored tab references, workspaces, the Other bucket, and pairing already work; clustering builds on them.
-- The AI model service is Google Gemini, per the constitution's preferred stack. The Stack Pivots table allows a swap to another model provider behind the same contract; clustering's observable behavior and this spec do not change under a pivot. No vector store or embeddings are used.
+- The AI model service is configurable behind one interface. The default is the Virginia Tech ARC LLM API and Google Gemini is the selectable backup (research section 19); clustering's observable behavior and this spec do not change under a provider swap. No vector store or embeddings are used.
 - Clustering runs **on request** (a client or the user triggers it). Automatic triggering as new tabs arrive is a later, additive step; this feature keeps a run cheap and safe to repeat so that step is easy. Home's "Organize my tabs" and similar controls are feature 005.
 - "Confidence" is a single system-defined bar per run (one tunable value). Its exact number is a planning decision; the behavior above holds for any value.
 - Only unplaced tabs are candidates for grouping: tabs in Other that neither the user nor a previous run has placed (a tab the user deliberately left in Other is excluded). Tabs already in a workspace are never re-evaluated in this feature (re-organizing across workspaces is feature 007, manual correction).

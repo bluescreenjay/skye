@@ -1,8 +1,8 @@
 // The clustering-specific layer over the shared AI client (contracts/model.md).
 // It defines what clustering asks the model and what it accepts back. Validation of
 // the answer lives in prompt.ts, never here, so a swapped provider gets the same checks.
-import { generateJson } from "../llm/gemini";
 import { ModelError, ModelUnconfiguredError } from "../llm/errors";
+import { generateJson, providerConfigured, unconfiguredMessage } from "../llm";
 
 /** A run considers at most this many unplaced tabs (most recent first); the rest stay in Other. */
 export const MAX_TABS_PER_RUN = 100;
@@ -58,34 +58,37 @@ const INSTRUCTIONS = [
   "Return JSON with a single key \"groups\".",
 ].join("\n");
 
-// Response schema in the vendor's OpenAPI-style dialect (verified against the live API).
-const SCHEMA = {
-  type: "OBJECT",
+// The answer shape, as standard JSON Schema. Each provider translates it to what its API
+// accepts (strict json_schema for the VT API; Gemini's own dialect for the backup).
+export const CLUSTER_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["groups"],
   properties: {
     groups: {
-      type: "ARRAY",
+      type: "array",
       items: {
-        type: "OBJECT",
+        type: "object",
+        additionalProperties: false,
+        required: ["name", "emoji", "confidence", "existingWorkspaceId", "tabIds"],
         properties: {
-          name: { type: "STRING" },
-          emoji: { type: "STRING", nullable: true },
-          confidence: { type: "NUMBER" },
-          existingWorkspaceId: { type: "STRING", nullable: true },
-          tabIds: { type: "ARRAY", items: { type: "STRING" } },
+          name: { type: "string" },
+          emoji: { type: ["string", "null"] },
+          confidence: { type: "number" },
+          existingWorkspaceId: { type: ["string", "null"] },
+          tabIds: { type: "array", items: { type: "string" } },
         },
-        required: ["name", "confidence", "tabIds"],
       },
     },
   },
-  required: ["groups"],
 };
 
-const geminiClusterModel: ClusterModel = {
+const providerClusterModel: ClusterModel = {
   async propose(input, signal) {
     const answer = await generateJson({
       purpose: "cluster",
       prompt: `${INSTRUCTIONS}\n\n${JSON.stringify(input)}`,
-      schema: SCHEMA,
+      schema: CLUSTER_SCHEMA,
       signal,
     });
     const groups = (answer as { groups?: unknown } | null)?.groups;
@@ -107,6 +110,6 @@ export function setModelForTests(model: ClusterModel | null): void {
  */
 export function getModel(): ClusterModel {
   if (override) return override;
-  if (!process.env.GEMINI_API_KEY?.trim()) throw new ModelUnconfiguredError();
-  return geminiClusterModel;
+  if (!providerConfigured()) throw new ModelUnconfiguredError(unconfiguredMessage());
+  return providerClusterModel;
 }

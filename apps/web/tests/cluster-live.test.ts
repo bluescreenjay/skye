@@ -1,7 +1,9 @@
-// Opt-in: calls the REAL Gemini API, so it costs model requests (about 2) against the
-// daily quota. It still runs on the in-process test database, never on Tiger.
+// Opt-in: calls the REAL active AI provider (LLM_PROVIDER, default the VT ARC API, which
+// needs the VT VPN), so it costs about 2 model requests. It still runs on the in-process
+// test database, never on Tiger.
 //
 //   CLUSTER_LIVE=1 pnpm --filter @ai-browser/web test cluster-live
+//   LLM_PROVIDER=gemini CLUSTER_LIVE=1 pnpm --filter @ai-browser/web test cluster-live
 //
 // Checks SC-001 (at least 80% of the 30-tab reference set in the right place) and one
 // sample of SC-006 (a 50-tab run finishes within 30 seconds; quickstart V9 takes ten).
@@ -18,7 +20,7 @@ const key = fixture("mixed-tabs.labels.json") as { labels: Record<string, string
 
 beforeEach(reset);
 
-describe.skipIf(process.env.CLUSTER_LIVE !== "1")("live Gemini (opt-in)", () => {
+describe.skipIf(process.env.CLUSTER_LIVE !== "1")("live AI provider (opt-in)", () => {
   async function seedAndRun(token: string, file: string) {
     const ingested = await read(ingestPost(req("POST", "/api/ingest/tabs", token, fixture(file))));
     expect(ingested.status).toBe(200);
