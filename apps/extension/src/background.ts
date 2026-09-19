@@ -94,3 +94,12 @@ async function ensureHeartbeat(): Promise<void> {
   }
 }
 ensureHeartbeat().catch((error) => console.warn("[ai-browser] could not create the heartbeat alarm", error));
+
+// Toolbar click opens Home in a new tab. Not gated on ingest config: an unpaired
+// token still shows the same chrome with an empty directory.
+chrome.action.onClicked.addListener(() => {
+  chrome.tabs
+    .create({ url: chrome.runtime.getURL("home.html") })
+    .catch((error) => console.warn("[ai-browser] could not open Home", error));
+});
+

@@ -1,0 +1,170 @@
+build a static, high-fidelity ui for a design-oriented ai browser. two views only: home and workspace. no real browsing, no backend. dummy data is fine. all copy lowercase.
+asset: use `main_background.png` as the full-app background (cover, fixed, no tiling). grain and color of the photo should stay visible around the ui.
+────────────────────────────────────────
+product
+────────────────────────────────────────
+a browser whose unit of work is a workspace (a named group of tabs), not a single tab. home is a dashboard of those workspaces. workspace view is the in-session layout: rail + panel + page.
+────────────────────────────────────────
+visual system
+────────────────────────────────────────
+surfaces
+- background: the photo, full bleed.
+- cards / panels sitting on the photo: white, rounded (12–16px). no drop shadows, no glow, no glass blur, no gradient overlays on the photo.
+- sidebars: white, flush left, square corners. they are sidebar-shaped, not cards. they sit on the photo but do not get rounded-rect treatment.
+- hairline dividers: 1px, #DB5B45 at ~20% opacity. never fat rules, never decorative lines.
+color
+- primary accent / titles / names / action buttons: #DB5B45
+- secondary accent / body text on white (tab titles, artifact titles, inputs, empty states): #4D626E
+- text sitting directly on the photo: white
+- action buttons: solid #DB5B45, white lowercase label. no gradients, no neon
+- mock app / tab icons: each icon a distinct color from a restrained palette (coral, slate, teal, sand, rust, navy, sage, ochre, wine, pine). white letter marks. not a rainbow of brand-logo favicons, and not all the same hue.
+type
+- one family only: a geometric / tech sans (e.g. inter, geist, or neue haas grotesk). 
+- titles / names: bold, tracking slightly tight
+- body / placeholders / tab titles: the thin or regular cut of the same family
+- everything lowercase. no sentence case, no title case, no all-caps labels.
+spacing
+- dense but not cramped. 8px grid.
+- icon rail: ~56px wide.
+- workspace panel (view 2): ~280–320px wide. not a fat inspector.
+- plenty of leftover negative space on home so the photo reads.
+anti-ai-look (do not do these)
+- inter + purple gradient + glassmorphism + huge rounded-3xl + soft shadows
+- sparkle / ✨ / gradient text / “welcome to your” empty states
+- floating blobs, mesh gradients on top of the photo, noise overlays (the photo already has grain)
+- pill buttons everywhere, 9999px radii, bouncing hover scales
+- 3-column “bento” marketing grids
+- generic dashboard cards with big numbers / charts
+- stock 3d icons, cute illustrations, lottie
+- “ai” badges, robot icons, chat bubbles as decoration
+- overly even dummy data (every card same length, every icon unique brand)
+- centered hero copy. this is a tool, not a landing page.
+────────────────────────────────────────
+shared: icon rail (left, both views)
+────────────────────────────────────────
+a ~56px-wide white sidebar, full viewport height, square corners, no labels.
+top → bottom:
+1. ungrouped tab icons
+   - stack of ~28px circular or slightly rounded-square site icons
+   - 8px gap
+   - if they overflow, this section scrolls internally (no page scroll for the rail)
+2. 1px divider
+3. saved workspace stacks
+   - ios-style app-group tiles: a small rounded square (~36px) containing a 2x2 of tiny tab icons
+   - one tile = one saved workspace
+   - if they overflow, this section scrolls
+selected item: a 2px #DB5B45 ring or a faint #DB5B45 wash. not a glow.
+the rail does not change width. it is icons only.
+────────────────────────────────────────
+view 1 — home
+────────────────────────────────────────
+layout (ltr):
+[ icon rail | main ]
+main is the remaining width. it scrolls vertically if content overflows. the rail stays fixed.
+main, top → bottom:
+1. url bar row
+   - white rounded url field + wordmark
+   - url field takes remaining width (24px side padding on the page)
+   - height ~44px
+   - placeholder: "url bar"
+   - placeholder color: #4D626E at reduced opacity
+   - no search icon, no sparkle, no buttons inside the field
+   - to the right of the url bar, on the photo: the wordmark "skye" in bold white, same type family, lowercase
+2. workspace cards
+   - vertical stack of white rounded rectangles
+   - 16px gap
+   - 24px page padding
+   - each card is one workspace and has two states
+collapsed card (~72–88px tall)
+- left: editable workspace name (bold, #DB5B45). click-to-edit inline, not a modal.
+- right of the name, same row: as many tab icons as fit, then stop. no “+12 more” pills.
+- click the card body (not the name) to expand.
+expanded card (~400–440px tall)
+divide the card into three equal columns, left → right, with vertical hairline dividers:
+  column 1 — tabs
+  - scrollable list of this workspace’s tabs
+  - each row: colored app icon + lowercase title in #4D626E. airy vertical padding (not compact chrome-style)
+  - overflow scrolls inside this column only
+  column 2 — actions
+  - ~3 accent buttons (examples: "summarize", "collect refs", "new artifact")
+  - solid #DB5B45, white lowercase text, modest radius (8px), not pills
+  - at the bottom of this column: a second input, full width of the column
+    placeholder: "ask the workspace anything"
+  column 3 — artifacts
+  - created artifacts for this workspace (notes, boards, files — dummy)
+  - kind label in #DB5B45; title in #4D626E
+  - empty: a single quiet line, "no artifacts yet", #4D626E, not a dashed dropzone
+keep the editable name + icon row as a full-width header above the three columns.
+interaction
+- only one workspace card expanded at a time (accordion). expanding one collapses the other.
+- drag tab icons between workspaces on home, onto rail workspace tiles, or into ungrouped tabs. drop on another icon to insert before it. click still opens; a drag does not.
+- clicking a tab row or a rail icon switches to view 2.
+seed 4–6 workspaces so home must scroll. mix short and long names. some cards have 2 tabs, some have 12.
+────────────────────────────────────────
+view 2 — workspace / open tab
+────────────────────────────────────────
+layout (ltr):
+[ icon rail | workspace panel | page ]
+icon rail (same component as home, but three sections):
+1. ungrouped tab icons
+2. divider
+3. open workspace stacks (ios 2x2 tiles)
+4. divider
+5. saved workspace stacks (same tile treatment)
+workspace panel (~280–320px, white, square corners, full height):
+top → bottom, no extra chrome:
+1. home button + wordmark
+   - small, top-left of this panel (not the rail)
+   - lowercase "home" or a house icon + "home"
+   - immediately to the right of the home button: the wordmark "skye" in bold #DB5B45 (it sits on white, so not white)
+   - returns to view 1
+   - not a big banner
+2. url bar
+   - white-on-white is wrong: this bar sits on the white panel, so treat it as a hairline-outlined field or a 4–6px inset well
+   - placeholder: "url bar"
+3. open tabs
+   - vertical tab list for the *currently selected workspace*
+   - favicon + title, generous padding, not compact
+   - this block takes remaining space and scrolls
+   - active tab: left 2px #DB5B45 bar or light wash, not a heavy filled row
+4. actions + ask
+   - pinned to the bottom of the panel
+   - ~3 accent buttons (same treatment as home)
+   - under them: input, placeholder "ask the workspace anything"
+page (right):
+- the remaining area is the “open tab”
+- for the mock: a large white rounded rectangle inset ~16px from the photo, empty or with a quiet lowercase page title. this is a frame, not a fake article.
+────────────────────────────────────────
+scrolling
+────────────────────────────────────────
+- home main: page scroll
+- rail sections: independent overflow if needed
+- expanded card columns: column 1 scrolls; 2 and 3 scroll if their content overflows
+- view 2 tab list: scrolls; action block stays pinned
+- native-looking thin scrollbars, no overlay “custom gradient” scrollbars
+────────────────────────────────────────
+data (dummy)
+────────────────────────────────────────
+ungrouped tabs: 4
+open workspaces (view 2 only): 2
+saved workspaces: 4–6, each with 2–12 tabs and 0–3 artifacts
+example workspaces:
+- "refs — furniture"
+- "type samples"
+- "client — atelier"
+- "reading"
+────────────────────────────────────────
+build
+────────────────────────────────────────
+html/css/js is fine. two routes or a simple view switch is enough.
+no frameworks required.
+do not invent extra screens, onboarding, settings, or a chat transcript pane.
+match the spec; do not “improve” it into a generic ai dashboard.
+
+────────────────────────────────────────
+amendments
+────────────────────────────────────────
+- product name is "skye". home: bold white "skye" to the right of the url bar, sitting on the photo. workspace panel: same wordmark immediately next to the home button, in #DB5B45.
+- expanded workspace cards split into three equal columns across the width (tabs | actions | artifacts), not stacked thirds.
+- two text colors on light surfaces: #DB5B45 for titles, names, buttons, kind labels; #4D626E for tab titles, artifact titles, input text, placeholders, empty states.
+- mock app icons are different colors (restrained palette), not monochrome terracotta.

@@ -1,10 +1,24 @@
 # @ai-browser/extension
 
-Chrome (Manifest V3) extension that **observes** your tabs and reports them to the AI Browser
-backend. It has no workspace UI: Home (feature 005) and the Sidebar (feature 006) come later.
-It never moves, groups, renames, or closes a tab, decides workspaces, or runs AI.
+Chrome (Manifest V3) extension that **observes** your tabs, reports them to the AI Browser
+backend, and opens **Home** — the all-workspaces directory — from the toolbar icon.
 
-## What it reports
+It never moves, groups, or closes a Chrome tab, decides workspaces, or runs AI. Home can
+rename workspaces and reassign saved tab refs through the API; clicking a tab opens that
+URL in a new browser tab and leaves Home open.
+
+## Home
+
+Click the toolbar icon. Home is an extension page (`home.html`), not Chrome’s new-tab page
+and not a popup. A normal Ctrl/Cmd+T stays the browser default.
+
+Layout matches `specs/005-home-all-workspaces/mocks/home-design-prototype/` (Home view only):
+photo, rail, “skye”, url field, greeting, workspace cards. Other tabs are rail-top icons, never
+a named “other” card. There is no create-workspace control and no dummy seed data.
+
+Walkthrough: `specs/005-home-all-workspaces/quickstart.md`.
+
+## What it reports (ingest)
 
 - A snapshot of every open web page (`http`/`https`) when it starts, and again after a gap in delivery.
 - A timestamped event for each tab that is opened, updated (address or title), activated, or closed.
@@ -26,15 +40,17 @@ kept for at least 24 hours and delivered in order, once each, when it comes back
 ```bash
 cp apps/extension/.env.example apps/extension/.env   # copy, do not rename
 # edit apps/extension/.env:
-#   VITE_API_BASE_URL=http://localhost:8787     (the stub receiver, below)
-#   VITE_DEVICE_TOKEN=dev-token
+#   VITE_API_BASE_URL=http://127.0.0.1:3000     (real API; Home and ingest)
+#   VITE_DEVICE_TOKEN=dev-token                 (same token for pairing)
 ```
 
-To send to the real API instead of the stub, start it (`pnpm --filter @ai-browser/web dev`, with `DATABASE_URL` and
-`DEVICE_TOKEN_SECRET` in the repo-root `.env`), set `VITE_API_BASE_URL=http://localhost:3000` and a token of at least 8
-characters, then rebuild and reload. The API creates the user the first time it sees the token, so keep the same token:
-a different one is a different, empty account. Read the result with `GET /api/tab-refs` and `GET /api/tab-events`
-using `Authorization: Bearer <your token>`.
+For ingest-only against the stub receiver, `VITE_API_BASE_URL=http://localhost:8787` still works;
+Home will show empty chrome because the stub is not the 003 API.
+
+Start the real API (`pnpm --filter @ai-browser/web dev`, with `DATABASE_URL` and
+`DEVICE_TOKEN_SECRET` in the repo-root `.env`), set `VITE_API_BASE_URL=http://127.0.0.1:3000` and a
+token of at least 8 characters, then rebuild and reload. The API creates the user the first time it
+sees the token, so keep the same token: a different one is a different, empty account.
 
 The values are read at build time and baked into the extension, so **`dist/` contains the token:
 never commit or share it**, and never commit `.env`. There is no settings screen; to point at a
@@ -43,18 +59,19 @@ different backend, change `.env` and rebuild.
 ## Run
 
 ```bash
-pnpm --filter @ai-browser/extension stub    # stand-in backend on :8787; logs every batch and how late each event arrived
+pnpm --filter @ai-browser/web dev           # 003 API on :3000 (needed for Home)
+pnpm --filter @ai-browser/extension stub    # optional stand-in ingest receiver on :8787
 pnpm --filter @ai-browser/extension build   # writes apps/extension/dist
 ```
 
 Then open `chrome://extensions`, turn on **Developer mode**, choose **Load unpacked**, and select `apps/extension/dist`.
-Stub flags: `--port`, `--token`, `--fail 500|401|slow` (see the header of `scripts/stub-receiver.mjs`).
+Click the toolbar icon for Home. Stub flags: `--port`, `--token`, `--fail 500|401|slow` (see the header of `scripts/stub-receiver.mjs`).
 
 Other scripts: `test` (Vitest) and `typecheck`. If `pnpm` is not installed, use `npx -y pnpm@9 …`.
 
 ## The toolbar badge
 
-The only visible surface. Nothing is shown while everything is fine.
+Same icon that opens Home. Nothing is shown on the badge while ingest is fine.
 
 | Badge | Meaning |
 | --- | --- |
@@ -65,7 +82,8 @@ The only visible surface. Nothing is shown while everything is fine.
 
 | File | Role |
 | --- | --- |
-| `src/background.ts` | Service worker: registers every listener and wires the modules. Nothing else. |
+| `home.html`, `src/home/` | Home directory page (toolbar). Mock CSS, 003 API client, weather, letter marks. |
+| `src/background.ts` | Service worker: ingest listeners plus `action.onClicked` → Home. |
 | `src/collector.ts` | Chrome tab events → queued events and pending snapshots (the 2 s settle and 30 s cap). |
 | `src/snapshot.ts` | Full snapshots, browser-start reset, and the active-tab sample. |
 | `src/snippet.ts` | Reads a page's text; decides when to read and when to reuse. |
@@ -76,7 +94,7 @@ The only visible surface. Nothing is shown while everything is fine.
 
 ## More
 
-- Spec, plan, contracts, and the validation walkthrough: `specs/002-tab-ingestion-extension/`
-  (`quickstart.md` is the step-by-step checklist to run against the stub).
+- Home spec and validation walkthrough: `specs/005-home-all-workspaces/` (`quickstart.md`).
+- Ingest spec: `specs/002-tab-ingestion-extension/` (`quickstart.md` against the stub).
 - The HTTP contract the backend (feature 003) must implement: `specs/002-tab-ingestion-extension/contracts/ingest-api.md`.
 - Wire types are shared with the server through `@ai-browser/shared`.

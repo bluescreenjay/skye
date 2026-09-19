@@ -9,21 +9,28 @@ import { installChromeMock, type ChromeMock, type MockTab } from "./helpers/chro
 const SRC = join(__dirname, "..", "src");
 
 function sourceFiles(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
-    entry.isDirectory() ? sourceFiles(join(dir, entry.name)) : entry.name.endsWith(".ts") ? [join(dir, entry.name)] : [],
-  );
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    if (entry.isDirectory()) {
+      // Home (feature 005) is a UI page; ingest modules stay observe-only.
+      if (entry.name === "home") return [];
+      return sourceFiles(join(dir, entry.name));
+    }
+    return entry.name.endsWith(".ts") ? [join(dir, entry.name)] : [];
+  });
 }
 
 describe("the extension only observes: no call can change the browser's tabs or windows", () => {
   const files = sourceFiles(SRC);
+  const ingestFiles = files.filter((file) => !file.endsWith("background.ts"));
 
   it("finds the source files it is meant to check", () => {
     expect(files.length).toBeGreaterThan(5);
   });
 
   // Any call that would move, group, rename, close, or otherwise act on a tab or window.
+  // chrome.tabs.create is allowed in background.ts so the toolbar can open Home.
   const forbidden = [
-    /chrome\.tabs\.(create|update|move|remove|group|ungroup|duplicate|discard|reload|goBack|goForward|highlight|setZoom|executeScript|insertCSS|captureVisibleTab)\b/,
+    /chrome\.tabs\.(update|move|remove|group|ungroup|duplicate|discard|reload|goBack|goForward|highlight|setZoom|executeScript|insertCSS|captureVisibleTab)\b/,
     /chrome\.tabGroups\b/,
     /chrome\.windows\.(create|update|remove)\b/,
     /chrome\.sidePanel\b/,
@@ -38,12 +45,19 @@ describe("the extension only observes: no call can change the browser's tabs or 
     }
   });
 
+  it("ingest modules still do not create tabs", () => {
+    for (const file of ingestFiles) {
+      const text = readFileSync(file, "utf8");
+      expect(text, file).not.toMatch(/chrome\.tabs\.create\b/);
+    }
+  });
+
   it("does read pages, but only through scripting.executeScript with the page-text reader", () => {
     const uses = files.filter((f) => /chrome\.scripting\.executeScript/.test(readFileSync(f, "utf8")));
     expect(uses.map((f) => f.split("/").pop())).toEqual(["snippet.ts"]);
   });
 
-  it("has no user interface: no HTML, popup, or DOM building in the source", () => {
+  it("ingest modules have no HTML, popup, or DOM building", () => {
     for (const file of files) {
       const text = readFileSync(file, "utf8");
       expect(text, file).not.toMatch(/document\.(createElement|write|body\.append)|innerHTML\s*=|new Notification|chrome\.notifications/);
