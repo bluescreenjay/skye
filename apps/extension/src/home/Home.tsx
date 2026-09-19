@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type DragEvent, type MouseEvent } from "react";
 import type { TabRef, Workspace } from "@ai-browser/shared";
+import { TabMark } from "../ui/TabMark";
+import { TabRow } from "../ui/TabRow";
 import { loadDirectory, moveTab, renameWorkspace, runCluster } from "./api";
 import { composeDirectory, type HomeDirectory } from "./compose";
 import { openHomeTab } from "./navigation";
-import { TabMark } from "../ui/TabMark";
-import { TabRow } from "../ui/TabRow";
 import type { OrganizeStatus } from "./organize";
 import { loadWeatherPhrase } from "./weather";
 import { WorkspaceChat } from "./WorkspaceChat";
@@ -38,8 +38,11 @@ export function Home() {
   const [organizeStatus, setOrganizeStatus] = useState<OrganizeStatus>("idle");
   const [organizeMessage, setOrganizeMessage] = useState("");
   const [directoryReady, setDirectoryReady] = useState(false);
-  const ignoreClick = useRef(false);
+  const [correctionNote, setCorrectionNote] = useState("");
+  const [enterMotion, setEnterMotion] = useState(true);
+  const suppressClicksUntil = useRef(0);
   const dragId = useRef<string | null>(null);
+  const dragRaf = useRef<number | null>(null);
   const organizing = useRef(false);
 
   const refresh = useCallback(async () => {
@@ -56,6 +59,13 @@ export function Home() {
     void loadWeatherPhrase().then(setWeather);
   }, []);
 
+  // Entrance animations must not stay on forever — re-renders during drag were
+  // restarting rail-icon keyframes and looking like a glitch from Other.
+  useEffect(() => {
+    const timer = window.setTimeout(() => setEnterMotion(false), 900);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   const onOrganize = () => {
     if (!directoryReady || organizing.current || organizeStatus === "running") return;
     organizing.current = true;
@@ -66,7 +76,9 @@ export function Home() {
         const outcome = await runCluster();
         setOrganizeStatus(outcome.status);
         setOrganizeMessage(outcome.message);
-        if (outcome.shouldRefresh) await refresh();
+        if (outcome.shouldRefresh) {
+          await refresh();
+        }
       } finally {
         organizing.current = false;
       }
@@ -74,27 +86,39 @@ export function Home() {
   };
 
   const afterDragClick = (event: { preventDefault(): void; stopPropagation(): void }): boolean => {
-    if (!ignoreClick.current) return false;
+    // Only suppress the synthetic click right after a finished drag — never latch
+    // a sticky flag on dragStart (that left Home unable to open tabs).
+    if (Date.now() >= suppressClicksUntil.current) return false;
     event.preventDefault();
     event.stopPropagation();
     return true;
   };
 
-  const onDragStart = (tabId: string) => (event: DragEvent) => {
-    dragId.current = tabId;
-    setDraggingId(tabId);
-    ignoreClick.current = true;
-    event.dataTransfer.setData("text/plain", tabId);
-    event.dataTransfer.effectAllowed = "move";
-  };
-
-  const onDragEnd = () => {
+  const endDrag = () => {
+    if (dragRaf.current != null) {
+      cancelAnimationFrame(dragRaf.current);
+      dragRaf.current = null;
+    }
     dragId.current = null;
     setDraggingId(null);
     setDropTarget(null);
-    window.setTimeout(() => {
-      ignoreClick.current = false;
-    }, 60);
+    suppressClicksUntil.current = Date.now() + 200;
+  };
+
+  const onDragStart = (tabId: string) => (event: DragEvent) => {
+    dragId.current = tabId;
+    event.dataTransfer.setData("text/plain", tabId);
+    event.dataTransfer.effectAllowed = "move";
+    if (dragRaf.current != null) cancelAnimationFrame(dragRaf.current);
+    // Defer dimming so React does not replace the drag source mid-start.
+    dragRaf.current = requestAnimationFrame(() => {
+      dragRaf.current = null;
+      setDraggingId(tabId);
+    });
+  };
+
+  const onDragEnd = () => {
+    endDrag();
   };
 
   const destinationFromTarget = (target: string): string | null => (target === "ungrouped" ? null : target);
@@ -103,9 +127,10 @@ export function Home() {
     event.preventDefault();
     event.stopPropagation();
     const tabId = event.dataTransfer.getData("text/plain") || dragId.current;
-    setDropTarget(null);
+    endDrag();
     if (!tabId) return;
     const workspaceId = destinationFromTarget(target);
+    const previous = directory;
     setDirectory((current) => {
       const all = [...current.other, ...current.cards.flatMap((card) => card.tabs)];
       const tab = all.find((item) => item.id === tabId);
@@ -115,8 +140,13 @@ export function Home() {
         all.map((item) => (item.id === tabId ? { ...item, workspaceId } : item)),
       );
     });
+    setCorrectionNote("");
     void moveTab(tabId, workspaceId).then((saved) => {
-      if (!saved) void refresh();
+      if (!saved) {
+        setDirectory(previous);
+        setCorrectionNote("could not save that move");
+        return;
+      }
     });
   };
 
@@ -125,7 +155,7 @@ export function Home() {
       event.preventDefault();
       event.stopPropagation();
       event.dataTransfer.dropEffect = "move";
-      setDropTarget(target);
+      setDropTarget((current) => (current === target ? current : target));
     },
     onDrop: onDrop(target),
   });
@@ -145,6 +175,7 @@ export function Home() {
   const commitRename = async (workspace: Workspace, next: string) => {
     const name = next.trim().toLowerCase();
     if (name.length < 1 || name.length > 80 || name === workspace.name) return;
+    const previous = directory;
     setDirectory((current) => ({
       ...current,
       cards: current.cards.map((card) =>
@@ -153,12 +184,17 @@ export function Home() {
           : card,
       ),
     }));
+    setCorrectionNote("");
     const saved = await renameWorkspace(workspace.id, name);
-    if (!saved) void refresh();
+    if (!saved) {
+      setDirectory(previous);
+      setCorrectionNote("could not rename that workspace");
+      return;
+    }
   };
 
   return (
-    <div id="app" className="app view-enter" data-view="home">
+    <div id="app" className={`app${enterMotion ? " view-enter" : ""}`} data-view="home">
       <aside className="rail" aria-label="icon rail">
         <div
           className={`rail-section rail-ungrouped${dropTarget === "ungrouped" ? " is-drop" : ""}`}
@@ -227,6 +263,11 @@ export function Home() {
               {organizeMessage}
             </p>
           ) : null}
+          {correctionNote ? (
+            <p className="organize-status is-failed" role="status">
+              {correctionNote}
+            </p>
+          ) : null}
         </div>
         {directory.cards.map((card) => (
           <WorkspaceCardView
@@ -278,7 +319,7 @@ function WorkspaceCardView({
 
   return (
     <article
-      className={`card${expanded ? " is-open" : " is-rising"}${dropTarget === card.workspace.id ? " is-drop" : ""}`}
+      className={`card${expanded ? " is-open" : ""}${dropTarget === card.workspace.id ? " is-drop" : ""}`}
       data-id={card.workspace.id}
       {...bindDrop(card.workspace.id)}
     >

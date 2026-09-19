@@ -8,7 +8,7 @@ export interface ActivePage {
 
 export type PanelView =
   | { kind: "loading" }
-  | { kind: "named"; page: ActivePage; workspace: Workspace; tabs: TabRef[] }
-  | { kind: "other"; page: ActivePage; tabs: TabRef[] }
+  | { kind: "named"; page: ActivePage; workspace: Workspace; tabs: TabRef[]; tabRef: TabRef | null }
+  | { kind: "other"; page: ActivePage; tabs: TabRef[]; tabRef: TabRef | null }
   | { kind: "ineligible" }
   | { kind: "unavailable"; message: string };

@@ -1,6 +1,6 @@
 # AI Browser — Feature Checklist
 
-Ordered Spec Kit features. **MVP cut line: 001–011** (includes **005b**). Do not start P1/stretch until the cut line ships.
+Ordered Spec Kit features. **MVP cut line: 001–011** (includes **005b**). Do not start P1/stretch (including **010b** MCP tools) until the cut line ships.
 
 Two views (constitution Principle VII): **Home** = all workspaces; **Sidebar** = Chrome Side Panel on the current tab.
 
@@ -20,11 +20,13 @@ How to use: for each feature, run `/speckit-specify` and paste the **Specify pro
 | 004 | AI clustering | P0 | ☑ implemented (server side: the API only; Home trigger is 005b; sidebar UI is 006) |
 | 005 | Home — all workspaces | P0 | ☑ implemented (toolbar Home; no new-tab override) |
 | 005b | Home → run clustering | P0 | ☑ implemented |
-| 006 | Chrome sidebar — in-tab workspace | P0 | ☐ |
-| 007 | Manual correction | P0 | ☐ |
-| 008 | Workspace AI chat | P0 | ☑ implemented (server side: the chat API; the sidebar chat panel is part of 006) |
+| 006 | Chrome sidebar — in-tab workspace | P0 | ☑ implemented |
+| 007 | Manual correction | P0 | ☑ implemented (Home drag/rename + sidebar move/dismiss; Chrome tab groups + create-workspace deferred to stretch 007b) |
+| 007b | Chrome tab groups + create workspace | Stretch | ☐ |
+| 008 | Workspace AI chat | P0 | ☑ implemented (server side: the chat API; Home card chat wired; sidebar chat panel still a shell from 006) |
 | 009 | Plan generation | — | ✂ cut (its checklist is an output of the 010 agents) |
 | 010 | Workspace agents | P0 | ☐ |
+| 010b | MCP + local action tools | Stretch | ☐ |
 | 011 | Global command bar | P0 | ☐ |
 | 012 | Saved workspaces + soft suggestions | P1 | ☐ |
 | 013 | Desktop workspace voice (ElevenLabs) | P1 | ☐ |
@@ -212,21 +214,20 @@ Build the in-tab workspace as a Chrome Side Panel. When the user is on a web pag
 
 ### 007 — Manual correction
 
-**What:** Users fix AI mistakes; corrections sync back to Chrome tabs.
+**What:** Users fix AI mistakes; corrections persist on the server.
 
 **In scope**
-- On **Home**: drag tabs between workspaces and to/from Other; create and rename workspaces
+- On **Home**: drag tabs between workspaces and to/from Other; rename workspaces
 - In **Sidebar**: move or recategorize the active tab (and dismiss “add to workspace” suggestions)
 - Persist corrections; override prior AI assignment
-- Extension applies moves (tab groups or equivalent) so Chrome matches the model
 - Record correction events for future learning signals
 
-**Out of scope:** Training a custom model from corrections
+**Out of scope / deferred:** Training a custom model from corrections; **Chrome tab-group sync** and **create-workspace on Home** (stretch **007b**)
 
 **Depends on:** 002, 003, 005, 006  
 **Unblocks:** trust for demo; improves 004 over time
 
-**Done when:** User can reorganize on Home (and move this tab from the sidebar) and see Chrome follow.
+**Done when:** User can reorganize on Home (and move this tab from the sidebar) and membership sticks after reload.
 
 **Specify prompt**
 ```text
@@ -277,17 +278,23 @@ Add per-workspace AI chat powered by the Gemini API, in the Chrome sidebar. Each
 - Store every run (input, output, status) as an action run on the workspace
 - A fixed catalog only: "agent" is the interface word for a one-shot tool, not an autonomous program
 
-**Out of scope:** user-defined or custom agents, multi-step or autonomous agents, MCP, computer-use, login-walled pages and PDFs, calendar integrations (stretch), a separate plan feature (009 is cut), and sidebar placement (006 reuses the component later)
+**Out of scope:** user-defined or custom agents, multi-step or autonomous agents, MCP and external SaaS tools (those are **010b**), computer-use, login-walled pages and PDFs, calendar integrations, a separate plan feature (009 is cut), and sidebar placement (006 reuses the component later)
 
 **Depends on:** 005, 008 (uses the shared AI layer and the workspace context from chat)  
-**Unblocks:** 011 (the command bar can run agents), the sidebar agent list (006)
+**Unblocks:** 011 (the command bar can run agents), the sidebar agent list (006), **010b**
 
 **Done when:** Clicking an agent on an expanded Home card produces a visible real result under it that is still there after a reload, and ticks on the "next steps" checklist persist and show up in chat answers.
 
 **Specify prompt**
 ```text
-Add a fixed list of workspace agents to each expanded card on Home, laid out as tabs | chat | agents (replacing the current action buttons and artifacts column). Each agent is a one-shot tool, not an autonomous program: it runs against the workspace's context and saves a real result that appears right under the agent, with older runs available to expand. Include roughly five reliable agents: summarize sources, compare options, what's missing, next steps (a checklist the user can tick, saved so the workspace chat can see it), and collect refs (key quotes with links). Agents may read the actual pages of the workspace's public https tabs on the server for richer text than the stored excerpt; this must be safe (no private or local addresses, size and time limits) and fetched page text must be treated as untrusted data, never instructions. The provider is configurable behind one interface (VT ARC by default, Gemini as backup) and every model call is triggered only by the user pressing an agent. No custom or multi-step agents, no MCP, no computer-use. It must be fully testable without any UI, like features 003, 004, and 008; the sidebar will reuse the same list later.
+Add a fixed list of workspace agents to each expanded card on Home, laid out as tabs | chat | agents (replacing the current action buttons and artifacts column). Each agent is a one-shot tool, not an autonomous program: it runs against the workspace's context and saves a real result that appears right under the agent, with older runs available to expand. Include roughly five reliable agents: summarize sources, compare options, what's missing, next steps (a checklist the user can tick, saved so the workspace chat can see it), and collect refs (key quotes with links). Agents may read the actual pages of the workspace's public https tabs on the server for richer text than the stored excerpt; this must be safe (no private or local addresses, size and time limits) and fetched page text must be treated as untrusted data, never instructions. The provider is configurable behind one interface (VT ARC by default, Gemini as backup) and every model call is triggered only by the user pressing an agent. No custom or multi-step agents, no MCP (that is stretch feature 010b), no computer-use. It must be fully testable without any UI, like features 003, 004, and 008; the sidebar will reuse the same list later.
 ```
+
+---
+
+### 010b — MCP + local action tools (stretch)
+
+**Stretch** — full entry lives under [Stretch → 010b](#010b--mcp--local-action-tools) below. Depends on 010; does not gate the MVP cut line. Full tool catalog on the server; UI shows a **dynamic, agent-picked** subset as action buttons (not every tool all the time).
 
 ---
 
@@ -357,6 +364,95 @@ Add desktop workspace voice using ElevenLabs in the Chrome sidebar. Users should
 
 ## Stretch
 
+### 007b — Chrome tab groups + create workspace
+
+**Stretch** — deferred from 007. Does not gate the MVP cut line.
+
+**What:** Project durable workspace membership onto Chrome tab groups, and let Home create empty named workspaces.
+
+**In scope**
+- Home **create workspace** control (POST `/api/workspaces`) and place a tab into it via drag
+- After successful membership/rename (and optionally organize), reconcile open eligible tabs into Chrome groups titled like their workspaces; ungroup Other
+- Two-way honesty: if the user drags a tab out of a Chrome group in the browser, Home membership should eventually match (or document one-way-only if that’s the chosen model)
+- `tabGroups` permission in a dedicated apply module; ingest stays observe-only
+
+**Out of scope:** ML retraining; inventing membership without a server write
+
+**Depends on:** 007  
+**Done when:** Open tabs sit in Chrome groups that match Home, and creating a workspace on Home works without fighting browser group edits.
+
+**Why deferred:** One-way group sync left Home out of date when the user moved tabs in Chrome; needs a clearer sync model before shipping.
+
+---
+
+### 010b — MCP + local action tools
+
+**What:** Real executable tools behind workspace agents and (later) chat/command bar: a small MCP client for GitHub, Notion, Slack, Jira, and Google Drive, plus first-party local/browser tools that need no third-party account. VT ARC (or Gemini) stays the LLM; this feature adds the tool layer, not a new model vendor. The full catalog lives on the server; the UI does **not** dump every tool as a permanent button. A suggestion agent reads workspace context (tabs, summary, plan, credentials available) and proposes a small set of the best next actions; the product **dynamically renders buttons** for those suggestions (label, tool id, prefilled args). The user still confirms by clicking—tools do not run silently.
+
+**Priority:** Stretch — start only after **010** ships. Does not gate the MVP cut line.
+
+**Tool catalog** (implement all on the server; the UI surfaces a context-picked subset)
+
+*Local / first-party (no MCP; server + extension)*
+
+| Tool id | What it does |
+| --- | --- |
+| `list_workspace_tabs` | Return the workspace’s saved tabs (title, URL, snippet) as structured data for other tools |
+| `read_public_pages` | Fetch allowed public https pages for richer text (reuse 010’s safe fetch rules) |
+| `write_summary` | Save a workspace summary artifact (markdown) on the workspace; show under the agent run |
+| `export_summary_markdown` | Download / offer the latest summary as a `.md` file |
+| `export_summary_pdf` | Generate a simple PDF of the latest summary and offer it for download |
+| `open_related_tabs` | Extension opens N suggested https URLs as new Chrome tabs (optionally assign into this workspace) |
+| `open_google_searches` | Build Google search URLs from queries and open them as new tabs |
+| `save_search_queries` | Persist suggested queries on the workspace so chat/agents can reuse them |
+| `append_plan_items` | Add checklist items to the workspace plan (same store as 010 “next steps”) |
+| `save_refs` | Persist quote + URL refs on the workspace (same idea as 010 collect refs) |
+| `copy_text` | Return text for the UI to copy to the clipboard (summaries, links, issue bodies) |
+| `compose_share_link` | Build a shareable deep link or plain-text bundle (workspace name + key URLs + summary blurb) for pasting elsewhere |
+
+*MCP-backed SaaS (real MCP client on the server)*
+
+| Integration | Tool ids (minimum) | Notes |
+| --- | --- | --- |
+| **GitHub** | `github_create_issue`, `github_create_gist`, `github_search_code_or_issues`, `github_comment_on_issue` | PAT or GitHub App; default to a configured demo repo |
+| **Notion** | `notion_create_page`, `notion_append_blocks`, `notion_search` | OAuth or internal integration token; page under a configured parent |
+| **Slack** | `slack_post_message`, `slack_upload_snippet` | Bot token; post to a configured channel (or channel arg if allowed) |
+| **Jira** | `jira_create_issue`, `jira_search`, `jira_add_comment` | Site URL + API token; project key configurable |
+| **Google Drive** | `drive_upload_markdown`, `drive_create_doc_from_summary`, `drive_get_share_link` | OAuth; upload summary/PDF or create a Doc from workspace summary |
+
+**In scope**
+- A server-side tool registry: each tool has id, description, JSON input schema, executor, and whether it is `local` or `mcp:<server>`
+- An MCP client module that connects to the five configured servers (stdio and/or HTTP/SSE as each server requires), lists tools, maps them into OpenAI-compatible `tools` for VT ARC / Gemini, executes `tool_calls`, and records results on `ActionRun`
+- **Dynamic action suggestions:** a user-triggered (or workspace-open / refresh) suggestion pass where the model sees the registry (ids + short descriptions + which integrations are connected) and workspace context, then returns a small ranked list of suggested actions (e.g. 3–6). Each suggestion has a human label, tool id, optional prefilled args, and short rationale. Home (and later sidebar) **renders only those as buttons**—not the full catalog. Suggestions refresh when workspace context changes materially or the user asks to refresh; omit tools whose credentials are missing
+- Clicking a suggested button runs that tool (or a short bounded tool loop, small max turns) and stores an `ActionRun`; the UI may refresh suggestions after a successful run
+- Credential wiring via env / per-user secrets for the five SaaS integrations; missing credentials → tool excluded from suggestions (and a clear “connect X” if the user somehow invokes it), not a crash
+- Local tools that the extension must perform (`open_related_tabs`, `open_google_searches`, downloads): server returns an action intent; extension executes and reports success/failure
+- Home (and later sidebar) shows external URL/id in the run result for SaaS writes (e.g. Notion page, GitHub issue)
+- Fake/stub MCP, suggestion, and local executors in tests so CI never needs live GitHub/Notion/etc.
+- Implement **every** tool in the catalog above on the server (local table + MCP minimum set); dynamic UI is how they are *presented*, not how many are *built*
+
+**Out of scope:** showing the entire tool catalog as a permanent button grid; computer-use / mouse agents; arbitrary user-added MCP servers in the UI; Pinterest, Spotify, Figma, Miro, Gmail (unless a leftover hour after the five); filesystem MCP on a remote host; replacing VT ARC; unbounded autonomous agents that run tools without a click; making MCP required for 010’s five one-shot agents
+
+**Depends on:** 010 (agent UI + ActionRun + safe page fetch), 008 (shared LLM), 002/003 (tabs + persistence); extension hooks for open-tab / download intents  
+**Unblocks:** richer demo actions; optional command-bar shortcuts in 011 later
+
+**Done when:** On an expanded Home card, the product shows a short, context-specific set of action buttons (not the full catalog). Those buttons can (1) write/export a summary (md + PDF), (2) open related tabs and Google searches in Chrome, and (3) with credentials configured, push or create something real in each of GitHub, Notion, Slack, Jira, and Drive when suggested—each run saved and visible after reload. Changing workspace context (or refresh) changes which buttons appear. All catalog tools exist behind the registry and are covered by fake-executor tests.
+
+**Specify prompt**
+```text
+Add stretch feature 010b: real action tools on top of workspace agents, without replacing the LLM provider (VT ARC default, Gemini backup).
+
+Build a server-side tool registry and MCP client with the full catalog below. The UI must NOT show every tool all the time. A suggestion agent (user-triggered or on workspace open/refresh) reads workspace context plus which integrations are connected, picks a small ranked set of best next actions (about 3–6), and the product dynamically creates buttons for only those (label, tool id, optional prefilled args, short rationale). Tools run only when the user clicks a button. After a run, suggestions may refresh. Omit tools that need missing credentials.
+
+Local / first-party tools (no third-party account): list_workspace_tabs, read_public_pages (reuse 010 safe fetch), write_summary, export_summary_markdown, export_summary_pdf, open_related_tabs, open_google_searches, save_search_queries, append_plan_items, save_refs, copy_text, compose_share_link. Tab-opening and file download that must happen in Chrome are returned as intents for the extension to execute.
+
+MCP-backed tools for five integrations — implement at least: GitHub (create_issue, create_gist, search, comment_on_issue); Notion (create_page, append_blocks, search); Slack (post_message, upload_snippet); Jira (create_issue, search, add_comment); Google Drive (upload_markdown, create_doc_from_summary, get_share_link). Credentials from env or per-user secrets; missing auth fails clearly and keeps those tools out of suggestions.
+
+Bounded tool loop on click (small max turns). Do not require MCP for the original 010 one-shot agents. No computer-use, no always-on full catalog UI, no arbitrary user-installed MCP servers, no swap of VT ARC, no silent tool execution without a click. Fully testable with fake MCP/suggestion/local executors. Home shows external result links/ids on successful SaaS tools.
+```
+
+---
+
 ### 014 — Mobile companion
 
 **What:** Phone as a remote interface to the same workspaces (Home-like list + chat).
@@ -387,6 +483,7 @@ Add a mobile companion that is a remote interface to the same persistent workspa
  │   │       └─ 007 correction (Home drag + sidebar move-this-tab)
  │   └─ 006 Sidebar (in-tab workspace)
  │       ├─ 008 chat ─ 010 agents (Home card first; 009 plan cut, folded into 010)
+ │       │              └─ 010b MCP + local tools (stretch; after 010)
  │       └─ 011 command bar (Home + browsing; generalizes 005b)
  └─ (after MVP) 012 → 013 ElevenLabs → 014 mobile
 ```

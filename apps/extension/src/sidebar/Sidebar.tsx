@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
+import type { Workspace } from "@ai-browser/shared";
 import { loadConfig } from "../config";
+import {
+  ignoreSuggestion,
+  listPendingSuggestions,
+  listWorkspaces,
+  moveTab,
+  putTabMembership,
+} from "./corrections-api";
 import { focusOrOpenSavedTab } from "../home/navigation";
 import { TabRow } from "../ui/TabRow";
 import { ToolPlaceholders } from "./ToolPlaceholders";
@@ -45,6 +53,11 @@ function activeUrl(view: PanelView): string {
 
 export function Sidebar() {
   const [view, setView] = useState<PanelView>(initialView);
+  const [destinations, setDestinations] = useState<Workspace[]>([]);
+  const [moveNote, setMoveNote] = useState("");
+  const [moving, setMoving] = useState(false);
+  const [suggestionId, setSuggestionId] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -66,12 +79,12 @@ export function Sidebar() {
         (page, signal) => fetchPanelView(page, config.config, signal),
         (next) => {
           if (!active) return;
-          // Home / chrome:// / other non-pages: dismiss the panel itself.
           if (next.kind === "ineligible") {
             window.close();
             return;
           }
           setView(next);
+          setMoveNote("");
         },
       );
     })().catch(() => {
@@ -81,13 +94,77 @@ export function Sidebar() {
       active = false;
       stop?.();
     };
-  }, []);
+  }, [reloadKey]);
+
+  useEffect(() => {
+    void listWorkspaces().then((result) => {
+      if (result.ok) setDestinations(result.value.filter((item) => item.status !== "archived"));
+    });
+  }, [view.kind === "named" || view.kind === "other" ? view.page.tabId : null]);
+
+  useEffect(() => {
+    if (view.kind !== "named" && view.kind !== "other") {
+      setSuggestionId(null);
+      return;
+    }
+    const tabRefId = view.tabRef?.id;
+    if (!tabRefId) {
+      setSuggestionId(null);
+      return;
+    }
+    void listPendingSuggestions().then((result) => {
+      if (!result.ok) {
+        setSuggestionId(null);
+        return;
+      }
+      const match = result.value.find((item) => item.tabRefIds.includes(tabRefId));
+      setSuggestionId(match?.id ?? null);
+    });
+  }, [view]);
 
   const title = workspaceTitle(view);
   const status = statusCopy(view);
   const tabs = view.kind === "named" || view.kind === "other" ? view.tabs : [];
   const activeTabId = view.kind === "named" || view.kind === "other" ? view.page.tabId : null;
   const url = activeUrl(view);
+  const currentWorkspaceId =
+    view.kind === "named" ? view.workspace.id : view.kind === "other" ? null : undefined;
+
+  const assignActive = (workspaceId: string | null) => {
+    if (view.kind !== "named" && view.kind !== "other") return;
+    if (currentWorkspaceId === workspaceId || moving) return;
+    setMoving(true);
+    setMoveNote("");
+    const page = view.page;
+    const existing = view.tabRef;
+    void (async () => {
+      try {
+        const result = existing
+          ? await moveTab(existing.id, workspaceId)
+          : await putTabMembership(page.url, "", page.tabId, workspaceId);
+        if (!result.ok) {
+          setMoveNote("could not move this tab");
+          return;
+        }
+        setReloadKey((value) => value + 1);
+      } finally {
+        setMoving(false);
+      }
+    })();
+  };
+
+  const onDismissSuggestion = () => {
+    if (!suggestionId || moving) return;
+    setMoving(true);
+    void ignoreSuggestion(suggestionId).then((result) => {
+      setMoving(false);
+      if (!result.ok) {
+        setMoveNote("could not dismiss that suggestion");
+        return;
+      }
+      setSuggestionId(null);
+    });
+  };
 
   return (
     <aside className="panel" aria-label="workspace">
@@ -111,6 +188,11 @@ export function Sidebar() {
           {status}
         </p>
       ) : null}
+      {moveNote ? (
+        <p className="panel-status" role="status">
+          {moveNote}
+        </p>
+      ) : null}
 
       <input
         className="panel-url"
@@ -122,6 +204,41 @@ export function Sidebar() {
         spellCheck={false}
         autoComplete="off"
       />
+
+      {view.kind === "named" || view.kind === "other" ? (
+        <section className="panel-move" aria-label="move this page">
+          <label className="panel-move-label" htmlFor="panel-move-select">
+            move this page
+          </label>
+          <select
+            id="panel-move-select"
+            className="panel-move-select"
+            disabled={moving}
+            value={currentWorkspaceId ?? "other"}
+            onChange={(event) => {
+              const next = event.target.value;
+              assignActive(next === "other" ? null : next);
+            }}
+          >
+            <option value="other">other</option>
+            {destinations.map((workspace) => (
+              <option key={workspace.id} value={workspace.id}>
+                {workspace.name.toLowerCase()}
+              </option>
+            ))}
+          </select>
+          {suggestionId ? (
+            <button
+              type="button"
+              className="panel-dismiss"
+              disabled={moving}
+              onClick={onDismissSuggestion}
+            >
+              dismiss suggestion
+            </button>
+          ) : null}
+        </section>
+      ) : null}
 
       {view.kind === "named" || view.kind === "other" ? (
         <section

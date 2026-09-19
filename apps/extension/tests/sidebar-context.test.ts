@@ -55,9 +55,9 @@ describe("createSidebarContext", () => {
     browser.setTab({ id: 2, windowId: 2, active: true, url: "https://example.com/b", incognito: false });
     browser.onActivated.fire({ tabId: 2, windowId: 2 });
     await flush();
-    second.resolve({ kind: "other", page: { tabId: 2, windowId: 2, url: "https://example.com/b" }, tabs: [] });
+    second.resolve({ kind: "other", page: { tabId: 2, windowId: 2, url: "https://example.com/b" }, tabs: [], tabRef: null });
     await flush();
-    first.resolve({ kind: "other", page: { tabId: 1, windowId: 2, url: "https://example.com/a" }, tabs: [] });
+    first.resolve({ kind: "other", page: { tabId: 1, windowId: 2, url: "https://example.com/a" }, tabs: [], tabRef: null });
     await flush();
 
     expect(views.at(-1)).toMatchObject({ kind: "other", page: { tabId: 2 } });
@@ -67,7 +67,7 @@ describe("createSidebarContext", () => {
 
   it("ignores other windows and refreshes on active URL, removal, and replacement", async () => {
     const browser = browserMock();
-    const load = vi.fn(async (page) => ({ kind: "other", page, tabs: [] } as PanelView));
+    const load = vi.fn(async (page) => ({ kind: "other", page, tabs: [], tabRef: null } as PanelView));
     const views: PanelView[] = [];
     const stop = createSidebarContext(2, load, (view) => views.push(view));
     await flush();
@@ -108,10 +108,10 @@ describe("createSidebarContext", () => {
       await flush();
     }
     expect(pending).toHaveLength(21);
-    pending.at(-1)!.result.resolve({ kind: "other", page: pending.at(-1)!.page, tabs: [] });
+    pending.at(-1)!.result.resolve({ kind: "other", page: pending.at(-1)!.page, tabs: [], tabRef: null });
     await flush();
     for (const item of pending.slice(0, -1).reverse()) {
-      item.result.resolve({ kind: "other", page: item.page, tabs: [] });
+      item.result.resolve({ kind: "other", page: item.page, tabs: [], tabRef: null });
     }
     await flush();
     expect(views.at(-1)).toMatchObject({ kind: "other", page: { tabId: 21 } });
@@ -125,7 +125,7 @@ describe("createSidebarContext", () => {
 
   it("re-reads saved context after stopping and reopening", async () => {
     browserMock();
-    const load = vi.fn(async (page) => ({ kind: "other", page, tabs: [] } as PanelView));
+    const load = vi.fn(async (page) => ({ kind: "other", page, tabs: [], tabRef: null } as PanelView));
     const first: PanelView[] = [];
     const stopFirst = createSidebarContext(2, load, (view) => first.push(view));
     await flush();

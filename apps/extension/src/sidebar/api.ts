@@ -75,7 +75,9 @@ export async function fetchPanelView(
       return { kind: "unavailable", message: "workspace unavailable" };
     }
     const tabs = body.tabRefs.filter((item) => item.workspaceId === (workspace?.id ?? null));
-    return workspace ? { kind: "named", page, workspace, tabs } : { kind: "other", page, tabs };
+    return workspace
+      ? { kind: "named", page, workspace, tabs, tabRef }
+      : { kind: "other", page, tabs, tabRef };
   } catch (error) {
     if (signal?.aborted) throw error;
     return { kind: "unavailable", message: "could not reach workspace" };
