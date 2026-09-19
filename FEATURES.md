@@ -16,7 +16,7 @@ How to use: for each feature, run `/speckit-specify` and paste the **Specify pro
 | --- | --- | --- | --- |
 | 001 | Monorepo + shared domain model | P0 | ☑ spec |
 | 002 | Tab ingestion extension | P0 | ☐ |
-| 003 | Workspace persistence API | P0 | ☐ |
+| 003 | Workspace persistence API | P0 | ☑ spec · plan · tasks |
 | 004 | AI clustering | P0 | ☐ |
 | 005 | Home — all workspaces | P0 | ☐ |
 | 006 | Chrome sidebar — in-tab workspace | P0 | ☐ |
