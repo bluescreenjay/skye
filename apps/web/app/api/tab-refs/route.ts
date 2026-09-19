@@ -99,12 +99,26 @@ export async function PUT(request: Request) {
     );
     existing = byId.rows[0] ?? null;
   }
-  if (!existing && chromeTabId !== null) {
-    const byChrome = await query<{ id: string; workspace_id: string | null }>(
-      "SELECT id, workspace_id FROM tab_refs WHERE user_id = $1 AND chrome_tab_id = $2",
-      [user!.id, chromeTabId],
+  // A page is the same record across restarts; Chrome's tab id is not (it only
+  // lasts one browser session), so it is never used to find a record.
+  if (!existing) {
+    const byUrl = await query<{ id: string; workspace_id: string | null }>(
+      `SELECT id, workspace_id FROM tab_refs
+       WHERE user_id = $1 AND url = $2
+       ORDER BY (chrome_tab_id IS NOT DISTINCT FROM $3) DESC, last_seen_at DESC
+       LIMIT 1`,
+      [user!.id, url, chromeTabId],
     );
-    existing = byChrome.rows[0] ?? null;
+    existing = byUrl.rows[0] ?? null;
+  }
+
+  const targetId = existing ? existing.id : typeof body.id === "string" ? body.id : randomUUID();
+  // A tab id belongs to one live tab: no other record of this user may keep it.
+  if (chromeTabId !== null) {
+    await query(
+      "UPDATE tab_refs SET chrome_tab_id = NULL WHERE user_id = $1 AND chrome_tab_id = $2 AND id <> $3",
+      [user!.id, chromeTabId, targetId],
+    );
   }
 
   if (existing) {
@@ -120,7 +134,7 @@ export async function PUT(request: Request) {
     return json({ tabRef: mapTabRef(result.rows[0]) });
   }
 
-  const id = typeof body.id === "string" ? body.id : randomUUID();
+  const id = targetId;
   const insertWorkspace = workspaceId === undefined ? null : workspaceId;
   const result = await query<DbTabRef>(
     `INSERT INTO tab_refs (id, user_id, workspace_id, url, title, snippet, chrome_tab_id, last_seen_at)

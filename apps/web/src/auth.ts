@@ -1,8 +1,11 @@
-import { createHash } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import type { User } from "@ai-browser/shared";
 import { query } from "./db";
 import { errorJson } from "./json";
 import { mapUser, type DbUser } from "./map";
+
+/** Shortest device token accepted, for pairing and for the ingest endpoint. */
+export const MIN_TOKEN_LENGTH = 8;
 
 export function hashDeviceToken(token: string): string {
   const secret = process.env.DEVICE_TOKEN_SECRET;
@@ -20,6 +23,26 @@ export async function findUserByToken(token: string): Promise<User | null> {
   );
   const row = result.rows[0];
   return row ? mapUser(row) : null;
+}
+
+/**
+ * The user for a device token, created the first time the token is seen. Returns
+ * null for a token that is too short. Two first requests at once end up with the
+ * same user: the second insert conflicts and reads the first one back.
+ */
+export async function ensureUser(token: string): Promise<User | null> {
+  if (token.length < MIN_TOKEN_LENGTH) return null;
+  const existing = await findUserByToken(token);
+  if (existing) return existing;
+
+  const created = await query<DbUser>(
+    `INSERT INTO users (id, device_token_hash) VALUES ($1, $2)
+     ON CONFLICT (device_token_hash) DO NOTHING
+     RETURNING id, device_token_hash, created_at`,
+    [randomUUID(), hashDeviceToken(token)],
+  );
+  if (created.rows[0]) return mapUser(created.rows[0]);
+  return findUserByToken(token);
 }
 
 export function bearerToken(request: Request): string | null {

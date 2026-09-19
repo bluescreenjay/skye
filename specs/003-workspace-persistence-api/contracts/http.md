@@ -71,7 +71,7 @@ Request:
 }
 ```
 
-If `chromeTabId` matches an existing row for this user, update that row; else insert.  
+A record is the same *page*, not the same Chrome tab. Match an existing row by `id`, else by this user's `url`; else insert. Chrome's `chromeTabId` only lasts for one browser session, so it is never used to find a record. Setting a `chromeTabId` clears it from any other record of this user, because a tab id belongs to one live tab.  
 `workspaceId: null` → Other. Omit `workspaceId` on update → leave membership unchanged; on insert → Other.
 
 Response `200`: `{ "tabRef": TabRef }`
@@ -98,7 +98,7 @@ Response `200`:
 
 or populated `Workspace` / `TabRef`. Never 404 for “not assigned.”
 
-Precedence: `chromeTabId` match, then latest `url` match for this user.
+Precedence: `chromeTabId` match (the live tab, kept current by `PUT /api/tab-refs` and `POST /api/ingest/tabs`), then latest `url` match for this user.
 
 ## POST /api/tab-events
 
@@ -124,6 +124,16 @@ Server fills `id`, `userId`, `time` (now if omitted).
 Query: `limit` default 50, max 200.
 
 Response `200`: `{ "tabEvents": TabEvent[] }` newest first, this user only.
+
+## POST /api/ingest/tabs
+
+The Chrome extension's batched feed (feature 002). Full contract, including the request body and the rules for matching tabs, is in `specs/002-tab-ingestion-extension/contracts/ingest-api.md`.
+
+Auth: `Authorization: Bearer <deviceToken>` of at least 8 characters. Unlike the other routes, a token the server has not seen before **creates its user**, because the extension has no separate pairing step. A shorter token is `401`.
+
+Response `200`: `{ "accepted": n, "duplicates": m }`. Each event is stored once by its client-generated `id`, so re-sending a batch reports duplicates instead of storing them again. `400` for a body that fails validation (the message names the item), `413` for more than 100 events, 500 tabs, or 1 MB, `500` for a server error (the extension retries).
+
+A page is one record per user and address across browser restarts. Each snapshot refreshes the record's live `chromeTabId` and clears that id from any other record; a `fullSnapshot: true` request clears the id of every record it does not list.
 
 ## Auth failures
 

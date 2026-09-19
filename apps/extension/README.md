@@ -30,6 +30,12 @@ cp apps/extension/.env.example apps/extension/.env   # copy, do not rename
 #   VITE_DEVICE_TOKEN=dev-token
 ```
 
+To send to the real API instead of the stub, start it (`pnpm --filter @ai-browser/web dev`, with `DATABASE_URL` and
+`DEVICE_TOKEN_SECRET` in the repo-root `.env`), set `VITE_API_BASE_URL=http://localhost:3000` and a token of at least 8
+characters, then rebuild and reload. The API creates the user the first time it sees the token, so keep the same token:
+a different one is a different, empty account. Read the result with `GET /api/tab-refs` and `GET /api/tab-events`
+using `Authorization: Bearer <your token>`.
+
 The values are read at build time and baked into the extension, so **`dist/` contains the token:
 never commit or share it**, and never commit `.env`. There is no settings screen; to point at a
 different backend, change `.env` and rebuild.
