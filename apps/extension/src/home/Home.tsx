@@ -8,6 +8,8 @@ import { openHomeTab } from "./navigation";
 import type { OrganizeStatus } from "./organize";
 import { loadWeatherPhrase } from "./weather";
 import { WorkspaceChat } from "./WorkspaceChat";
+import { createPairingOffer, loadDevices, revokeDevice } from "./pairing";
+import type { Device } from "@ai-browser/shared";
 
 const ACTIONS = ["summarize", "collect refs", "new artifact"] as const;
 
@@ -40,6 +42,10 @@ export function Home() {
   const [directoryReady, setDirectoryReady] = useState(false);
   const [correctionNote, setCorrectionNote] = useState("");
   const [enterMotion, setEnterMotion] = useState(true);
+  const [pairingOpen, setPairingOpen] = useState(false);
+  const [offer, setOffer] = useState<{ code: string; expiresAt: string; qrUrl: string } | null>(null);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [pairingMessage, setPairingMessage] = useState("");
   const suppressClicksUntil = useRef(0);
   const dragId = useRef<string | null>(null);
   const dragRaf = useRef<number | null>(null);
@@ -58,6 +64,24 @@ export function Home() {
   useEffect(() => {
     void loadWeatherPhrase().then(setWeather);
   }, []);
+
+  const refreshDevices = useCallback(() => {
+    void loadDevices().then(setDevices);
+  }, []);
+
+  const startPairing = () => {
+    setPairingMessage("");
+    void createPairingOffer().then((next) => {
+      if (!next) { setPairingMessage("could not create a pairing code"); return; }
+      setOffer(next);
+      refreshDevices();
+    }).catch(() => setPairingMessage("could not create a pairing code"));
+  };
+
+  const togglePairing = () => {
+    setPairingOpen((open) => !open);
+    if (!pairingOpen) { refreshDevices(); if (!offer) startPairing(); }
+  };
 
   // Entrance animations must not stay on forever — re-renders during drag were
   // restarting rail-icon keyframes and looking like a glitch from Other.
@@ -268,7 +292,9 @@ export function Home() {
               {correctionNote}
             </p>
           ) : null}
+          <button type="button" className="organize-btn pairing-btn" onClick={togglePairing}>pair phone</button>
         </div>
+        {pairingOpen ? <PairingPanel offer={offer} devices={devices} message={pairingMessage} onNewCode={startPairing} onRevoke={async (id) => { if (await revokeDevice(id)) refreshDevices(); }} /> : null}
         {directory.cards.map((card) => (
           <WorkspaceCardView
             key={card.workspace.id}
@@ -287,6 +313,14 @@ export function Home() {
       </main>
     </div>
   );
+}
+
+function PairingPanel({ offer, devices, message, onNewCode, onRevoke }: { offer: { code: string; expiresAt: string; qrUrl: string } | null; devices: Device[]; message: string; onNewCode: () => void; onRevoke: (id: string) => void }) {
+  const phones = devices.filter((device) => device.kind === "mobile" && !device.revokedAt);
+  return <section className="pairing-panel">
+    <div><p className="pairing-title">pair your phone</p>{offer ? <><code className="pairing-code">{offer.code}</code><p className="pairing-copy">Enter this code at the companion, or open <a href={offer.qrUrl} target="_blank" rel="noreferrer">this pairing link</a>. Expires {new Date(offer.expiresAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.</p></> : <p className="pairing-copy">Creating a short-lived code…</p>}{message ? <p className="pairing-copy">{message}</p> : null}<button type="button" className="btn" onClick={onNewCode}>new code</button></div>
+    <div><p className="pairing-title">paired phones</p>{phones.length ? phones.map((device) => <div className="paired-device" key={device.id}><span>{device.label || "Mobile companion"}</span><button className="btn" type="button" onClick={() => onRevoke(device.id)}>revoke</button></div>) : <p className="pairing-copy">No phones paired yet.</p>}</div>
+  </section>;
 }
 
 function WorkspaceCardView({

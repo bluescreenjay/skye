@@ -11,6 +11,12 @@ Apply the shared 001 DDL once (ignore errors if tables already exist):
 psql "$DATABASE_URL" -f packages/shared/sql/001_init.sql
 ```
 
+For the mobile companion, apply the independently revocable device and pairing-offer tables after 001:
+
+```bash
+node apps/web/scripts/apply-sql.mjs packages/shared/sql/014_mobile_devices.sql
+```
+
 `DATABASE_URL` and `DEVICE_TOKEN_SECRET` live in the repo-root `.env`.
 
 ## Dev
@@ -36,6 +42,8 @@ Pairing and workspace curls: `specs/003-workspace-persistence-api/quickstart.md`
 | `GET /api/suggestions`, `POST /api/suggestions/:id/accept`, `POST /api/suggestions/:id/ignore` | Suggestions the AI was not sure enough to apply |
 | `GET /api/overview` | Home's read: workspaces with tabs, Other, and pending suggestions in one call |
 | `POST /api/workspaces/:id/chat`, `GET /api/workspaces/:id/chat` | Ask about a workspace and get a streamed answer; read its saved conversation (feature 008) |
+| `POST /api/pairing/offers`, `POST /api/pairing/redeem` | Create a short-lived desktop offer; redeem it once into a mobile device token (feature 014) |
+| `GET /api/devices`, `POST /api/devices/:id/revoke` | List a person's device credentials and revoke one immediately (feature 014) |
 
 ## Tests
 
