@@ -1,0 +1,462 @@
+{
+ "batchId": "fixture-50",
+ "sentAt": "2026-09-19T12:00:00.000Z",
+ "fullSnapshot": true,
+ "active": {
+  "windowId": 1,
+  "chromeTabId": 1
+ },
+ "tabs": [
+  {
+   "chromeTabId": 1,
+   "windowId": 1,
+   "active": true,
+   "url": "https://www.google.com/travel/flights/search/kyoto",
+   "title": "Flights to Kyoto (KIX) - Google Flights",
+   "snippet": "Round-trip flights from New York to Osaka Kansai in October from $890. Kyoto is about 75 minutes from the airport by train.",
+   "lastSeenAt": "2026-09-19T11:59:00.000Z"
+  },
+  {
+   "chromeTabId": 2,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.tripadvisor.com/Hotels-g298564-Kyoto_Kyoto_Prefecture_Kinki-Hotels.html",
+   "title": "THE 10 BEST Hotels in Kyoto",
+   "snippet": "Compare prices for ryokan and hotels near Gion, Kyoto Station and Arashiyama. Free cancellation on most rooms.",
+   "lastSeenAt": "2026-09-19T11:58:00.000Z"
+  },
+  {
+   "chromeTabId": 3,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.japan-guide.com/e/e3915.html",
+   "title": "Fushimi Inari Shrine - Kyoto",
+   "snippet": "Thousands of vermilion torii gates climb the hillside. Best visited early morning. Free admission, open 24 hours.",
+   "lastSeenAt": "2026-09-19T11:57:00.000Z"
+  },
+  {
+   "chromeTabId": 4,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.timeout.com/kyoto/things-to-do/best-things-to-do-in-kyoto",
+   "title": "33 Best Things to Do in Kyoto",
+   "snippet": "Temples, tea houses, Nishiki Market and the Philosopher's Path. What to see in two, three or five days.",
+   "lastSeenAt": "2026-09-19T11:56:00.000Z"
+  },
+  {
+   "chromeTabId": 5,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.reddit.com/r/JapanTravel/comments/1kyoto5day/kyoto_5_day_itinerary_feedback/",
+   "title": "Kyoto 5 day itinerary - feedback? : r/JapanTravel",
+   "snippet": "Day 1 Fushimi Inari, Day 2 Arashiyama bamboo grove, Day 3 Nara day trip, Day 4 Gion and tea ceremony.",
+   "lastSeenAt": "2026-09-19T11:55:00.000Z"
+  },
+  {
+   "chromeTabId": 6,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.japan-guide.com/e/e2019.html",
+   "title": "Japan Rail Pass: is it worth it in 2026?",
+   "snippet": "Prices went up, so compare with individual Shinkansen tickets from Tokyo to Kyoto before you buy.",
+   "lastSeenAt": "2026-09-19T11:54:00.000Z"
+  },
+  {
+   "chromeTabId": 7,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.nomadicmatt.com/travel-guides/japan-travel-tips/kyoto-travel-guide/",
+   "title": "Kyoto Travel Guide",
+   "snippet": "Where to eat, sleep and what to see: kaiseki dinners, geisha districts, and the best temples to visit.",
+   "lastSeenAt": "2026-09-19T11:53:00.000Z"
+  },
+  {
+   "chromeTabId": 8,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.viator.com/tours/Kyoto/Tea-Ceremony-in-Gion/d332-5586TEA",
+   "title": "Kyoto Tea Ceremony Experience",
+   "snippet": "Small-group tea ceremony in a machiya townhouse in Gion. 60 minutes, kimono rental optional.",
+   "lastSeenAt": "2026-09-19T11:52:00.000Z"
+  },
+  {
+   "chromeTabId": 9,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.xe.com/currencyconverter/convert/?Amount=1&From=USD&To=JPY",
+   "title": "USD to JPY - Convert US Dollars to Japanese Yen",
+   "snippet": "Live exchange rate: 1 USD = 148 JPY. Handy for budgeting your Japan trip.",
+   "lastSeenAt": "2026-09-19T11:51:00.000Z"
+  },
+  {
+   "chromeTabId": 10,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.lonelyplanet.com/japan/kyoto",
+   "title": "Kyoto travel - Lonely Planet",
+   "snippet": "Kyoto's temples, gardens and geisha districts: everything you need to plan a visit.",
+   "lastSeenAt": "2026-09-19T11:50:00.000Z"
+  },
+  {
+   "chromeTabId": 11,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.klook.com/en-US/city/26-kyoto-things-to-do/",
+   "title": "Kyoto tours and activities - Klook",
+   "snippet": "Book day trips, cooking classes and temple tours in Kyoto.",
+   "lastSeenAt": "2026-09-19T11:49:00.000Z"
+  },
+  {
+   "chromeTabId": 12,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.airbnb.com/kyoto-japan/stays",
+   "title": "Kyoto stays - Airbnb",
+   "snippet": "Machiya townhouses and apartments near Gion and Kyoto Station.",
+   "lastSeenAt": "2026-09-19T11:48:00.000Z"
+  },
+  {
+   "chromeTabId": 13,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.hyperdia.com/en/",
+   "title": "Japan train timetable - Hyperdia",
+   "snippet": "Shinkansen Tokyo to Kyoto departure times and fares.",
+   "lastSeenAt": "2026-09-19T11:47:00.000Z"
+  },
+  {
+   "chromeTabId": 14,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.google.com/maps/place/Kinkaku-ji",
+   "title": "Kinkaku-ji (Golden Pavilion) - Google Maps",
+   "snippet": "Zen temple covered in gold leaf, reflected in the pond. Open 9 AM to 5 PM.",
+   "lastSeenAt": "2026-09-19T11:46:00.000Z"
+  },
+  {
+   "chromeTabId": 15,
+   "windowId": 1,
+   "active": false,
+   "url": "https://tabelog.com/en/kyoto/",
+   "title": "Kyoto restaurants - Tabelog",
+   "snippet": "Top-rated restaurants in Kyoto: kaiseki, ramen, tofu and matcha desserts.",
+   "lastSeenAt": "2026-09-19T11:45:00.000Z"
+  },
+  {
+   "chromeTabId": 16,
+   "windowId": 1,
+   "active": false,
+   "url": "https://vitest.dev/config/",
+   "title": "Configuring Vitest",
+   "snippet": "Config reference: test.include, globalSetup, fileParallelism, environment, testTimeout.",
+   "lastSeenAt": "2026-09-19T11:44:00.000Z"
+  },
+  {
+   "chromeTabId": 17,
+   "windowId": 1,
+   "active": false,
+   "url": "https://node-postgres.com/apis/pool",
+   "title": "pg.Pool - node-postgres",
+   "snippet": "Pool API: connect, query, end. Idle timeout and maximum number of clients.",
+   "lastSeenAt": "2026-09-19T11:43:00.000Z"
+  },
+  {
+   "chromeTabId": 18,
+   "windowId": 1,
+   "active": false,
+   "url": "https://nextjs.org/docs/app/api-reference/file-conventions/route",
+   "title": "File-system conventions: route.js | Next.js",
+   "snippet": "Route Handlers let you create custom request handlers using the Web Request and Response APIs.",
+   "lastSeenAt": "2026-09-19T11:42:00.000Z"
+  },
+  {
+   "chromeTabId": 19,
+   "windowId": 1,
+   "active": false,
+   "url": "https://github.com/electric-sql/pglite",
+   "title": "electric-sql/pglite: Embeddable Postgres",
+   "snippet": "Lightweight WASM Postgres that runs in Node and the browser. Great for tests.",
+   "lastSeenAt": "2026-09-19T11:41:00.000Z"
+  },
+  {
+   "chromeTabId": 20,
+   "windowId": 1,
+   "active": false,
+   "url": "https://stackoverflow.com/questions/2741244/how-to-rollback-to-a-savepoint-in-postgresql",
+   "title": "PostgreSQL ROLLBACK TO SAVEPOINT - Stack Overflow",
+   "snippet": "ROLLBACK TO SAVEPOINT name undoes all commands executed after the savepoint was established.",
+   "lastSeenAt": "2026-09-19T11:40:00.000Z"
+  },
+  {
+   "chromeTabId": 21,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.typescriptlang.org/docs/handbook/2/narrowing.html",
+   "title": "TypeScript: Documentation - Narrowing",
+   "snippet": "TypeScript follows possible paths of execution to narrow types at a given position.",
+   "lastSeenAt": "2026-09-19T11:39:00.000Z"
+  },
+  {
+   "chromeTabId": 22,
+   "windowId": 1,
+   "active": false,
+   "url": "https://developer.chrome.com/docs/extensions/reference/api/tabs",
+   "title": "chrome.tabs API | Chrome for Developers",
+   "snippet": "Use the chrome.tabs API to interact with the browser's tab system: create, modify and rearrange tabs.",
+   "lastSeenAt": "2026-09-19T11:38:00.000Z"
+  },
+  {
+   "chromeTabId": 23,
+   "windowId": 1,
+   "active": false,
+   "url": "https://zod.dev/",
+   "title": "Zod: TypeScript-first schema validation",
+   "snippet": "Zod is a TypeScript-first schema declaration and validation library with static type inference.",
+   "lastSeenAt": "2026-09-19T11:37:00.000Z"
+  },
+  {
+   "chromeTabId": 24,
+   "windowId": 1,
+   "active": false,
+   "url": "https://docs.timescale.com/use-timescale/latest/hypertables/",
+   "title": "Hypertables | Timescale Docs",
+   "snippet": "Hypertables partition tables by time for fast inserts and queries on time-series data.",
+   "lastSeenAt": "2026-09-19T11:36:00.000Z"
+  },
+  {
+   "chromeTabId": 25,
+   "windowId": 1,
+   "active": false,
+   "url": "https://eslint.org/docs/latest/use/configure/",
+   "title": "Configure ESLint",
+   "snippet": "Configuration files, rules and shared configs for linting TypeScript.",
+   "lastSeenAt": "2026-09-19T11:35:00.000Z"
+  },
+  {
+   "chromeTabId": 26,
+   "windowId": 1,
+   "active": false,
+   "url": "https://pnpm.io/workspaces",
+   "title": "Workspace | pnpm",
+   "snippet": "Monorepo support: workspace protocol, filtering and running scripts across packages.",
+   "lastSeenAt": "2026-09-19T11:34:00.000Z"
+  },
+  {
+   "chromeTabId": 27,
+   "windowId": 1,
+   "active": false,
+   "url": "https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal/any_static",
+   "title": "AbortSignal: any() static method - MDN",
+   "snippet": "Returns an AbortSignal that aborts when any of the given signals abort.",
+   "lastSeenAt": "2026-09-19T11:33:00.000Z"
+  },
+  {
+   "chromeTabId": 28,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.postgresql.org/docs/current/sql-savepoint.html",
+   "title": "PostgreSQL: Documentation: SAVEPOINT",
+   "snippet": "SAVEPOINT establishes a new savepoint within the current transaction.",
+   "lastSeenAt": "2026-09-19T11:32:00.000Z"
+  },
+  {
+   "chromeTabId": 29,
+   "windowId": 1,
+   "active": false,
+   "url": "https://github.com/vercel/next.js/discussions/route-handler-timeouts",
+   "title": "Route handler timeouts - vercel/next.js Discussion",
+   "snippet": "How to set maxDuration for long-running route handlers.",
+   "lastSeenAt": "2026-09-19T11:31:00.000Z"
+  },
+  {
+   "chromeTabId": 30,
+   "windowId": 1,
+   "active": false,
+   "url": "https://ai.google.dev/gemini-api/docs/structured-output",
+   "title": "Structured output | Gemini API",
+   "snippet": "Configure Gemini to respond with JSON that matches a schema.",
+   "lastSeenAt": "2026-09-19T11:30:00.000Z"
+  },
+  {
+   "chromeTabId": 31,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.kingarthurbaking.com/recipes/rustic-sourdough-bread-recipe",
+   "title": "Rustic Sourdough Bread Recipe",
+   "snippet": "Feed your starter, mix, and bulk ferment 4 to 6 hours. Bake in a preheated Dutch oven.",
+   "lastSeenAt": "2026-09-19T11:29:00.000Z"
+  },
+  {
+   "chromeTabId": 32,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.seriouseats.com/sourdough-starter-troubleshooting",
+   "title": "Sourdough Starter Troubleshooting",
+   "snippet": "Why is my starter not rising? Temperature, flour type and feeding ratios explained.",
+   "lastSeenAt": "2026-09-19T11:28:00.000Z"
+  },
+  {
+   "chromeTabId": 33,
+   "windowId": 1,
+   "active": false,
+   "url": "https://cooking.nytimes.com/recipes/1017060-no-knead-bread",
+   "title": "No-Knead Bread Recipe - NYT Cooking",
+   "snippet": "Flour, water, salt and yeast with a long overnight rise. Bake in a covered pot for a crackly crust.",
+   "lastSeenAt": "2026-09-19T11:27:00.000Z"
+  },
+  {
+   "chromeTabId": 34,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.thekitchn.com/best-dutch-ovens-for-bread-baking",
+   "title": "The Best Dutch Ovens for Baking Bread",
+   "snippet": "We tested enameled cast iron pots for oven spring, crust and easy handling.",
+   "lastSeenAt": "2026-09-19T11:26:00.000Z"
+  },
+  {
+   "chromeTabId": 35,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.youtube.com/watch?v=scoringsourdough",
+   "title": "How to Score Sourdough Bread - YouTube",
+   "snippet": "Scoring patterns, blade angle and depth for a beautiful ear.",
+   "lastSeenAt": "2026-09-19T11:25:00.000Z"
+  },
+  {
+   "chromeTabId": 36,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.bonappetit.com/recipe/pizza-dough",
+   "title": "Pizza Dough Recipe | Bon Appetit",
+   "snippet": "A no-fuss dough that rises overnight in the fridge for the best flavor.",
+   "lastSeenAt": "2026-09-19T11:24:00.000Z"
+  },
+  {
+   "chromeTabId": 37,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.budgetbytes.com/",
+   "title": "Budget Bytes: Delicious Recipes on a Budget",
+   "snippet": "Weekly meal prep ideas and cheap dinners.",
+   "lastSeenAt": "2026-09-19T11:23:00.000Z"
+  },
+  {
+   "chromeTabId": 38,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.epicurious.com/recipes/food/views/focaccia",
+   "title": "Focaccia Recipe | Epicurious",
+   "snippet": "Olive oil, flaky salt and rosemary on a dimpled, chewy loaf.",
+   "lastSeenAt": "2026-09-19T11:22:00.000Z"
+  },
+  {
+   "chromeTabId": 39,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.youtube.com/watch?v=breadshaping",
+   "title": "Bread Shaping Tutorial - YouTube",
+   "snippet": "How to shape a batard and a boule for even oven spring.",
+   "lastSeenAt": "2026-09-19T11:21:00.000Z"
+  },
+  {
+   "chromeTabId": 40,
+   "windowId": 1,
+   "active": false,
+   "url": "https://news.ycombinator.com/",
+   "title": "Hacker News",
+   "snippet": "Show HN, Ask HN, and the front page of links about technology, startups and programming.",
+   "lastSeenAt": "2026-09-19T11:20:00.000Z"
+  },
+  {
+   "chromeTabId": 41,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.theverge.com/tech",
+   "title": "Tech - The Verge",
+   "snippet": "The latest technology news, reviews and analysis on gadgets, apps and the companies behind them.",
+   "lastSeenAt": "2026-09-19T11:19:00.000Z"
+  },
+  {
+   "chromeTabId": 42,
+   "windowId": 1,
+   "active": false,
+   "url": "https://medium.com/tag/productivity",
+   "title": "Productivity on Medium",
+   "snippet": "Stories about habits, focus, and getting more done.",
+   "lastSeenAt": "2026-09-19T11:18:00.000Z"
+  },
+  {
+   "chromeTabId": 43,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.nytimes.com/section/technology",
+   "title": "Technology - The New York Times",
+   "snippet": "Latest news and analysis about technology, business and innovation.",
+   "lastSeenAt": "2026-09-19T11:17:00.000Z"
+  },
+  {
+   "chromeTabId": 44,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.linkedin.com/feed/",
+   "title": "Feed | LinkedIn",
+   "snippet": "Posts from your network about jobs, industry news and career advice.",
+   "lastSeenAt": "2026-09-19T11:16:00.000Z"
+  },
+  {
+   "chromeTabId": 45,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.producthunt.com/",
+   "title": "Product Hunt - The best new products in tech",
+   "snippet": "Daily launches of new apps, gadgets and developer tools.",
+   "lastSeenAt": "2026-09-19T11:15:00.000Z"
+  },
+  {
+   "chromeTabId": 46,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.weather.gov/",
+   "title": "National Weather Service",
+   "snippet": "Forecasts, warnings and current conditions for your area.",
+   "lastSeenAt": "2026-09-19T11:14:00.000Z"
+  },
+  {
+   "chromeTabId": 47,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.amazon.com/dp/B0EXAMPLE1/?ref=sr_1_3&tag=abc-20",
+   "title": "Amazon.com: USB-C to USB-C cable, 6ft",
+   "snippet": "Fast charging braided cable. Prime eligible.",
+   "lastSeenAt": "2026-09-19T11:13:00.000Z"
+  },
+  {
+   "chromeTabId": 48,
+   "windowId": 1,
+   "active": false,
+   "url": "https://en.wikipedia.org/wiki/Capybara",
+   "title": "Capybara - Wikipedia",
+   "snippet": "The capybara is the largest living rodent, native to South America.",
+   "lastSeenAt": "2026-09-19T11:12:00.000Z"
+  },
+  {
+   "chromeTabId": 49,
+   "windowId": 1,
+   "active": false,
+   "url": "https://tools.usps.com/go/TrackConfirmAction",
+   "title": "USPS Tracking",
+   "snippet": "Track your package with a tracking number.",
+   "lastSeenAt": "2026-09-19T11:11:00.000Z"
+  },
+  {
+   "chromeTabId": 50,
+   "windowId": 1,
+   "active": false,
+   "url": "https://www.espn.com/nba/",
+   "title": "NBA Scores and Schedule - ESPN",
+   "snippet": "Live scores, standings and highlights.",
+   "lastSeenAt": "2026-09-19T11:10:00.000Z"
+  }
+ ],
+ "events": []
+}

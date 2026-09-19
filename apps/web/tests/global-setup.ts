@@ -4,7 +4,9 @@ import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
 import { PGLiteSocketServer } from "@electric-sql/pglite-socket";
 
-const SCHEMA = fileURLToPath(new URL("../../../packages/shared/sql/001_init.sql", import.meta.url));
+const SCHEMAS = ["001_init.sql", "004_clustering.sql"].map((file) =>
+  fileURLToPath(new URL(`../../../packages/shared/sql/${file}`, import.meta.url)),
+);
 
 function freePort(): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -18,19 +20,22 @@ function freePort(): Promise<number> {
 }
 
 /**
- * Starts a throwaway Postgres with the real 001 schema and points the app at it.
+ * Starts a throwaway Postgres with the real 001 and 004 schemas and points the app at it.
  * DATABASE_URL is set explicitly, and src/db.ts never overrides a variable that is
  * already set, so these tests cannot reach a real database or read one from .env.
+ * The same goes for the AI key: it is blanked unless CLUSTER_LIVE=1, so no test can
+ * call the real model (and spend the daily quota) by accident.
  */
 export default async function setup() {
   const db = await PGlite.create();
-  await db.exec(readFileSync(SCHEMA, "utf8"));
+  for (const schema of SCHEMAS) await db.exec(readFileSync(schema, "utf8"));
   const port = await freePort();
   const server = new PGLiteSocketServer({ db, port, host: "127.0.0.1", maxConnections: 20 });
   await server.start();
 
   process.env.DATABASE_URL = `postgres://postgres:postgres@127.0.0.1:${port}/postgres?sslmode=disable`;
   process.env.DEVICE_TOKEN_SECRET = "test-only-secret";
+  if (process.env.CLUSTER_LIVE !== "1") process.env.GEMINI_API_KEY = "";
 
   return async () => {
     await server.stop();

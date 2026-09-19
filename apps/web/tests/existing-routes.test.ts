@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { POST as ingestPost } from "@/app/api/ingest/tabs/route";
 import { GET as resolveGet } from "@/app/api/resolve/route";
 import { POST as sessionPost } from "@/app/api/session/route";
 import { GET as tabEventsGet, POST as tabEventsPost } from "@/app/api/tab-events/route";
+import { PATCH as tabRefPatch } from "@/app/api/tab-refs/[id]/route";
 import { GET as tabRefsGet, PUT as tabRefsPut } from "@/app/api/tab-refs/route";
 import { GET as workspaceGet, PATCH as workspacePatch } from "@/app/api/workspaces/[id]/route";
 import { GET as workspacesGet, POST as workspacesPost } from "@/app/api/workspaces/route";
 import { query } from "@/src/db";
-import { read, req, reset } from "./helpers";
+import { batch, read, req, reset, tab } from "./helpers";
 
 const ALICE = "alice-device-token-0001";
 const BOB = "bob-device-token-000002";
@@ -167,5 +169,64 @@ describe("PUT /api/tab-refs follows the address, not Chrome's tab id", () => {
     const again = await putTab(ALICE, { id: first.json.tabRef.id, url: "https://a.example/renamed", title: "A2", chromeTabId: 1 });
     expect(again.json.tabRef.id).toBe(first.json.tabRef.id);
     expect(await listTabs(ALICE)).toHaveLength(1);
+  });
+});
+
+describe("placement source (feature 004): who placed a tab", () => {
+  beforeEach(async () => {
+    await pair(ALICE);
+  });
+
+  const only = async (url: string) => (await listTabs(ALICE)).find((t: { url: string }) => t.url === url);
+
+  it("a tab that arrives from the extension has never been placed", async () => {
+    const reply = await read(ingestPost(req("POST", "/api/ingest/tabs", ALICE, batch({ tabs: [tab(1, "https://a.example/")] }))));
+    expect(reply.status).toBe(200);
+    const stored = await only("https://a.example/");
+    expect(stored.placementSource).toBeNull();
+    expect(stored.workspaceId).toBeNull();
+  });
+
+  it("PUT with a workspaceId, or with null (Other), is the user's decision", async () => {
+    const ws = await createWorkspace(ALICE);
+    expect((await putTab(ALICE, { url: "https://a.example/", workspaceId: ws.id })).json.tabRef.placementSource).toBe("user");
+    // a new tab put straight into Other is a decision too: it must not be clustered later
+    expect((await putTab(ALICE, { url: "https://b.example/", workspaceId: null })).json.tabRef.placementSource).toBe("user");
+  });
+
+  it("PUT without a workspaceId leaves an unplaced tab unplaced and a placed tab as it was", async () => {
+    const ws = await createWorkspace(ALICE);
+    expect((await putTab(ALICE, { url: "https://a.example/", title: "one" })).json.tabRef.placementSource).toBeNull();
+    expect((await putTab(ALICE, { url: "https://a.example/", title: "two" })).json.tabRef.placementSource).toBeNull();
+    await putTab(ALICE, { url: "https://c.example/", workspaceId: ws.id });
+    const refreshed = await putTab(ALICE, { url: "https://c.example/", title: "renamed page" });
+    expect(refreshed.json.tabRef).toMatchObject({ placementSource: "user", workspaceId: ws.id });
+  });
+
+  it("PATCH with a workspaceId, or with null, is the user's decision; without one it is not", async () => {
+    const ws = await createWorkspace(ALICE);
+    const id = (await putTab(ALICE, { url: "https://a.example/" })).json.tabRef.id;
+    const retitled = await read(tabRefPatch(req("PATCH", "/x", ALICE, { title: "new title" }), ctx(id)));
+    expect(retitled.json.tabRef.placementSource).toBeNull();
+    const moved = await read(tabRefPatch(req("PATCH", "/x", ALICE, { workspaceId: ws.id }), ctx(id)));
+    expect(moved.json.tabRef).toMatchObject({ workspaceId: ws.id, placementSource: "user" });
+    const toOther = await read(tabRefPatch(req("PATCH", "/x", ALICE, { workspaceId: null }), ctx(id)));
+    expect(toOther.json.tabRef).toMatchObject({ workspaceId: null, placementSource: "user" });
+  });
+
+  it("ingesting a placed tab again does not change who placed it", async () => {
+    const ws = await createWorkspace(ALICE);
+    await putTab(ALICE, { url: "https://a.example/", workspaceId: ws.id });
+    await read(ingestPost(req("POST", "/api/ingest/tabs", ALICE, batch({ tabs: [tab(1, "https://a.example/")] }))));
+    expect(await only("https://a.example/")).toMatchObject({ placementSource: "user", workspaceId: ws.id });
+  });
+
+  it("GET /api/resolve and GET /api/tab-refs carry the field", async () => {
+    const ws = await createWorkspace(ALICE);
+    await putTab(ALICE, { url: "https://a.example/", chromeTabId: 7, workspaceId: ws.id });
+    expect((await resolveTab(ALICE, "chromeTabId=7")).json.tabRef.placementSource).toBe("user");
+    const listed = (await read(tabRefsGet(req("GET", "/api/tab-refs?other=true", ALICE)))).json.tabRefs;
+    expect(listed).toEqual([]);
+    expect((await listTabs(ALICE))[0]).toHaveProperty("placementSource", "user");
   });
 });

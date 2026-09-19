@@ -1,8 +1,9 @@
 import { randomUUID } from "crypto";
 import { requireUser } from "@/src/auth";
+import { recordCorrection } from "@/src/corrections";
 import { query } from "@/src/db";
 import { errorJson, json, optionsResponse } from "@/src/json";
-import { mapTabRef, type DbTabRef } from "@/src/map";
+import { mapTabRef, TAB_REF_COLUMNS, type DbTabRef } from "@/src/map";
 
 export const runtime = "nodejs";
 
@@ -26,7 +27,7 @@ export async function GET(request: Request) {
   const workspaceId = params.get("workspaceId");
   const other = params.get("other") === "true";
 
-  let sql = `SELECT id, user_id, workspace_id, url, title, snippet, chrome_tab_id, last_seen_at
+  let sql = `SELECT ${TAB_REF_COLUMNS}
              FROM tab_refs WHERE user_id = $1`;
   const values: unknown[] = [user!.id];
 
@@ -85,16 +86,12 @@ export async function PUT(request: Request) {
     return errorJson("workspaceId must be a string or null", 400);
   }
 
-  let existing = null as
-    | {
-        id: string;
-        workspace_id: string | null;
-      }
-    | null;
+  type Existing = { id: string; workspace_id: string | null; placement_source: "ai" | "user" | null };
+  let existing = null as Existing | null;
 
   if (typeof body.id === "string") {
-    const byId = await query<{ id: string; workspace_id: string | null }>(
-      "SELECT id, workspace_id FROM tab_refs WHERE id = $1 AND user_id = $2",
+    const byId = await query<Existing>(
+      "SELECT id, workspace_id, placement_source FROM tab_refs WHERE id = $1 AND user_id = $2",
       [body.id, user!.id],
     );
     existing = byId.rows[0] ?? null;
@@ -102,8 +99,8 @@ export async function PUT(request: Request) {
   // A page is the same record across restarts; Chrome's tab id is not (it only
   // lasts one browser session), so it is never used to find a record.
   if (!existing) {
-    const byUrl = await query<{ id: string; workspace_id: string | null }>(
-      `SELECT id, workspace_id FROM tab_refs
+    const byUrl = await query<Existing>(
+      `SELECT id, workspace_id, placement_source FROM tab_refs
        WHERE user_id = $1 AND url = $2
        ORDER BY (chrome_tab_id IS NOT DISTINCT FROM $3) DESC, last_seen_at DESC
        LIMIT 1`,
@@ -124,23 +121,30 @@ export async function PUT(request: Request) {
   if (existing) {
     const nextWorkspace =
       workspaceId === undefined ? existing.workspace_id : workspaceId;
+    // Sending workspaceId (even null = Other) is a decision by the user; leaving it
+    // out keeps whoever placed the tab before (feature 004: placement_source).
     const result = await query<DbTabRef>(
       `UPDATE tab_refs
-       SET url = $1, title = $2, snippet = $3, chrome_tab_id = $4, workspace_id = $5, last_seen_at = now()
+       SET url = $1, title = $2, snippet = $3, chrome_tab_id = $4, workspace_id = $5, last_seen_at = now(),
+           placement_source = CASE WHEN $8::boolean THEN 'user' ELSE placement_source END
        WHERE id = $6 AND user_id = $7
-       RETURNING id, user_id, workspace_id, url, title, snippet, chrome_tab_id, last_seen_at`,
-      [url, title, snippet, chromeTabId, nextWorkspace, existing.id, user!.id],
+       RETURNING ${TAB_REF_COLUMNS}`,
+      [url, title, snippet, chromeTabId, nextWorkspace, existing.id, user!.id, workspaceId !== undefined],
     );
+    // The user overrode where the AI put this tab: keep that as a signal (feature 004).
+    if (workspaceId !== undefined && existing.placement_source === "ai" && nextWorkspace !== existing.workspace_id) {
+      await recordCorrection(user!.id, existing.id, existing.workspace_id, nextWorkspace, url);
+    }
     return json({ tabRef: mapTabRef(result.rows[0]) });
   }
 
   const id = targetId;
   const insertWorkspace = workspaceId === undefined ? null : workspaceId;
   const result = await query<DbTabRef>(
-    `INSERT INTO tab_refs (id, user_id, workspace_id, url, title, snippet, chrome_tab_id, last_seen_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, now())
-     RETURNING id, user_id, workspace_id, url, title, snippet, chrome_tab_id, last_seen_at`,
-    [id, user!.id, insertWorkspace, url, title, snippet, chromeTabId],
+    `INSERT INTO tab_refs (id, user_id, workspace_id, url, title, snippet, chrome_tab_id, last_seen_at, placement_source)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, now(), CASE WHEN $8::boolean THEN 'user' ELSE NULL END)
+     RETURNING ${TAB_REF_COLUMNS}`,
+    [id, user!.id, insertWorkspace, url, title, snippet, chromeTabId, workspaceId !== undefined],
   );
   return json({ tabRef: mapTabRef(result.rows[0]) });
 }

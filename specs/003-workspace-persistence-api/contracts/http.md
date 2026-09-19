@@ -135,6 +135,22 @@ Response `200`: `{ "accepted": n, "duplicates": m }`. Each event is stored once 
 
 A page is one record per user and address across browser restarts. Each snapshot refreshes the record's live `chromeTabId` and clears that id from any other record; a `fullSnapshot: true` request clears the id of every record it does not list.
 
+## Added by feature 004: who placed a tab
+
+Every `TabRef` in a response (`GET /api/tab-refs`, `PUT /api/tab-refs`, `PATCH /api/tab-refs/:id`, `GET /api/resolve`) now also carries:
+
+```json
+{ "placementSource": "ai" | "user" | null }
+```
+
+`null` means the tab has never been placed. `"user"` means the user placed it, including deliberately leaving it in Other. `"ai"` means an AI clustering run placed it (see `specs/004-ai-clustering/`). This is how the sidebar can tell that a tab's workspace was chosen by the AI.
+
+Write-side effects on the two placement routes:
+
+- `PUT /api/tab-refs` and `PATCH /api/tab-refs/:id`: when the request **sends `workspaceId`** (a workspace id, or `null` for Other), the tab becomes `placementSource: "user"`. Leaving `workspaceId` out changes nothing about who placed it.
+- If the tab was `"ai"` and the request actually **moves** it to a different workspace (or to or from Other), one row is also written to `corrections` (from, to, tab, url) as a signal for later organization. Confirming the tab where it already is writes none.
+- `POST /api/ingest/tabs` never sets `placementSource`.
+
 ## Auth failures
 
 Missing/unknown token → `401`. Do not leak whether another user’s id exists (`404` for cross-user ids).
