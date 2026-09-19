@@ -1,0 +1,1544 @@
+CONCISE SPEC
+
+# AI Browser
+
+### One-line description
+
+**An AI-native browser that automatically turns your tabs into persistent workspaces that understand what you’re working on and can help you act on it.**
+
+### Core Concept
+
+Instead of treating every browser tab as an independent page, AI Browser understands that groups of tabs represent **tasks, projects, or goals**.
+
+The browser continuously reads the user's open tabs, identifies relationships between them, and automatically organizes them into persistent **workspaces**.
+
+**Tab → Context → Workspace → Plan → Actions**
+
+### Core Experience
+
+When a user opens multiple related tabs, the AI automatically creates a workspace.
+
+For example:
+
+```text
+💻 Hackathon
+   GitHub
+   Figma
+   MCP Documentation
+   React Documentation
+
+✈️ Switzerland Trip
+   Flights
+   Hotels
+   Restaurants
+   Google Maps
+
+📚 Research
+   Paper 1
+   Paper 2
+   Google Scholar
+
+OTHER TABS
+   YouTube
+   Reddit
+```
+
+Organization happens continuously in the background.
+
+Users maintain complete control and can:
+
+* drag tabs between workspaces
+* remove tabs
+* create workspaces manually
+* rename or merge workspaces
+* move tabs into "Other"
+* save/archive workspaces
+
+The AI learns from these corrections.
+
+---
+
+## Workspaces
+
+A workspace is a persistent container around a user's activity.
+
+It contains:
+
+* related tabs
+* accumulated context
+* conversation history
+* an AI-generated plan
+* notes
+* generated content
+* available actions
+
+Closing the browser does **not** destroy the workspace.
+
+When the user returns later, they can continue where they left off.
+
+### Workspace View
+
+```text
+┌───────────────────────────────────────┐
+│ 💻 Hackathon                          │
+│                                       │
+│ PLAN                                  │
+│ ☑ Choose concept                      │
+│ ☑ Research architecture              │
+│ ☐ Build prototype                     │
+│ ☐ Prepare demo                        │
+│                                       │
+│ ACTIONS                               │
+│ [Summarize] [Research] [Create Doc]   │
+│ [Create Tasks] [Compare]              │
+│                                       │
+│ TABS                                  │
+│ GitHub · Figma · Docs · ...           │
+│                                       │
+│ Ask this workspace...                │
+└───────────────────────────────────────┘
+```
+
+---
+
+## Workspace AI
+
+Every workspace has its own AI context.
+
+Users can ask:
+
+* "What have I found so far?"
+* "Summarize everything."
+* "What am I missing?"
+* "What did we decide?"
+* "What should I do next?"
+* "Create a document from this research."
+* "Update my plan."
+
+The user does not need to repeatedly explain the context because the workspace already contains it.
+
+---
+
+## Contextual Actions
+
+The AI identifies actions that would be useful for the current workspace.
+
+Examples:
+
+**Research**
+
+* Summarize
+* Compare sources
+* Extract citations
+* Create research document
+
+**Travel**
+
+* Compare flights
+* Build itinerary
+* Find restaurants
+* Add events to calendar
+
+**Shopping**
+
+* Compare products
+* Find alternatives
+* Compare prices
+* Create shopping list
+
+Actions can be powered by APIs, MCP servers, integrations, or specialized agents.
+
+The long-term goal is for the AI to **discover and recommend new actions dynamically**, rather than relying entirely on a fixed action menu.
+
+---
+
+## Global AI Command Bar
+
+A universal command bar lets users control the browser through natural language.
+
+Examples:
+
+> "Organize my tabs."
+
+> "Put everything related to my trip together."
+
+> "Create a workspace for these tabs."
+
+> "Clean up my browser."
+
+> "Find everything related to my project."
+
+This becomes the natural-language control layer for the browser.
+
+---
+
+## Mobile Companion
+
+A mobile app provides access to the same persistent workspaces.
+
+Users can:
+
+* view workspaces
+* ask questions
+* review plans
+* trigger actions
+* interact through voice
+
+The phone essentially acts as a **voice interface to the user's workspaces**.
+
+For example:
+
+> "What's going on with my hackathon?"
+
+> "Summarize my research."
+
+> "What do I still need to do?"
+
+The browser and phone access the same workspace context.
+
+---
+
+## MVP
+
+The one-week hackathon MVP should focus on the core loop:
+
+1. Read open tabs and page content.
+2. AI-cluster tabs into workspaces.
+3. Display workspaces in a dedicated UI.
+4. Persist workspaces across sessions.
+5. Allow drag-and-drop correction.
+6. Generate a contextual checklist.
+7. Let users chat with each workspace.
+8. Provide several real contextual actions.
+9. Add a global AI command bar.
+
+### Stretch
+
+* mobile app
+* voice interaction
+* ElevenLabs voice responses
+* calendar/document integrations
+* dynamic action discovery
+
+### Technical Direction
+
+Start with a **Chrome extension + web application**, rather than building a full browser.
+
+The extension handles tab/page access and organization.
+
+The web application handles workspace state, AI context, plans, conversations, and actions.
+
+A full Chromium-based browser can become the longer-term direction.
+
+---
+
+## Product Philosophy
+
+Traditional browsers organize **pages**.
+
+AI Browser organizes **work**.
+
+> **Cursor understands your codebase. AI Browser understands your browser.**
+
+The fundamental unit is no longer the tab.
+
+It is the **workspace**.
+
+
+THOROUGH SPEC
+# AI Browser — Thorough Product Specification
+
+## 1. Product Definition
+
+**AI Browser is an AI-native browser experience that understands what a user is doing across their open tabs, automatically organizes related activity into persistent workspaces, and gives each workspace its own memory, plan, AI assistant, and ability to take action.**
+
+The fundamental shift is:
+
+**Traditional browser**
+
+```text
+Browser → Window → Tabs → Pages
+```
+
+**AI Browser**
+
+```text
+Browser → Workspaces → Tasks → Context → Actions
+```
+
+The browser should not only know **what pages are open**.
+
+It should understand **why those pages are open**.
+
+---
+
+# 2. Product Thesis
+
+People naturally use collections of browser tabs to represent larger activities.
+
+A user might have:
+
+* five flight tabs
+* three hotel tabs
+* Google Maps
+* restaurant recommendations
+* a Reddit discussion
+* a travel guide
+
+The browser sees fifteen pages.
+
+The user sees:
+
+> "I'm planning a trip."
+
+AI Browser turns that implicit structure into an explicit workspace.
+
+### Core thesis
+
+> **Your tabs become workspaces. Your workspaces become agents.**
+
+The product can be thought of as:
+
+> **Cursor for the browser.**
+
+Cursor understands the files, dependencies, history, and structure of a coding project.
+
+AI Browser understands the tabs, pages, research, decisions, plans, and history surrounding a user's task.
+
+---
+
+# 3. Problem
+
+Modern browsers are fundamentally page-oriented.
+
+The browser provides mechanisms such as:
+
+* tabs
+* bookmarks
+* folders
+* tab groups
+* browsing history
+
+But these mechanisms require the user to manually construct structure.
+
+A typical browsing session might look like:
+
+```text
+32 open tabs
+
+6 research papers
+4 GitHub pages
+3 Google Docs
+5 shopping pages
+4 travel pages
+2 emails
+3 random articles
+5 miscellaneous tabs
+```
+
+The user has to determine:
+
+* which tabs belong together
+* which tabs matter
+* what the overall task is
+* what they have already learned
+* what remains to be done
+* where to save useful information
+* what external tools they should use
+
+AI Browser automates this organization while keeping the user in control.
+
+---
+
+# 4. Core Product Loop
+
+```text
+USER BROWSES
+      ↓
+AI OBSERVES CONTEXT
+      ↓
+AI IDENTIFIES RELATED ACTIVITY
+      ↓
+WORKSPACES FORM AUTOMATICALLY
+      ↓
+WORKSPACE BUILDS CONTEXT
+      ↓
+AI GENERATES PLAN
+      ↓
+AI RECOMMENDS ACTIONS
+      ↓
+USER WORKS
+      ↓
+WORKSPACE CONTEXT UPDATES
+      ↓
+USER RETURNS LATER
+      ↓
+WORK CONTINUES
+```
+
+This loop is the foundation of the product.
+
+---
+
+# 5. Tab Intelligence
+
+The AI continuously processes information about open tabs.
+
+Potential inputs include:
+
+* URL
+* page title
+* page text
+* metadata
+* domain
+* semantic similarity
+* links between pages
+* user's interaction history
+* existing workspace context
+* previous workspace corrections
+
+The system uses these signals to determine whether tabs appear to belong to the same activity.
+
+### Example
+
+The user opens:
+
+```text
+Google Flights
+United Airlines
+Airbnb
+Google Maps
+Reddit: Switzerland travel
+Zurich restaurant guide
+Swiss tourism website
+```
+
+The AI creates:
+
+```text
+✈️ Switzerland Trip
+7 tabs
+```
+
+The user never explicitly created the group.
+
+---
+
+# 6. Live Organization
+
+Organization should be **continuous**, not a one-time cleanup operation.
+
+The AI watches for emerging clusters.
+
+For example:
+
+```text
+10:00 AM
+
+💻 Hackathon
+   GitHub
+   Figma
+
+📚 Research
+   Paper 1
+   Paper 2
+
+OTHER
+   YouTube
+```
+
+The user begins researching React agent frameworks.
+
+The browser recognizes that the new tabs are likely related to the hackathon:
+
+```text
+💻 Hackathon
+   GitHub
+   Figma
+   React Agents
+   MCP Documentation
+   Agent Framework
+
+📚 Research
+   Paper 1
+   Paper 2
+
+OTHER
+   YouTube
+```
+
+The system should avoid aggressively moving tabs when confidence is low.
+
+Possible behavior:
+
+> "These 3 tabs seem related to your Hackathon workspace."
+
+**[Add] [Ignore]**
+
+This balances automation with user control.
+
+---
+
+# 7. Workspace Model
+
+A workspace is the fundamental persistent object in the product.
+
+A workspace contains:
+
+```text
+Workspace
+├── Tabs
+├── Page Context
+├── AI Context
+├── Conversation History
+├── Plan
+├── Notes
+├── Generated Content
+├── Actions
+├── Decisions
+└── History
+```
+
+Unlike a traditional tab group, a workspace survives independently of the tabs themselves.
+
+A user can close every tab associated with a workspace while preserving the workspace.
+
+---
+
+# 8. Workspace Lifecycle
+
+A workspace can move through several states:
+
+```text
+Detected
+   ↓
+Active
+   ↓
+Saved
+   ↓
+Inactive
+   ↓
+Reopened
+   ↓
+Active
+```
+
+For example:
+
+**Monday**
+
+User researches an apartment.
+
+**Tuesday**
+
+They close everything.
+
+**Friday**
+
+They reopen:
+
+> 🏠 Apartment Search
+
+The workspace still contains:
+
+* previously visited apartments
+* research
+* notes
+* plan
+* previous AI conversations
+* decisions
+* outstanding tasks
+
+The user can say:
+
+> "Continue where we left off."
+
+---
+
+# 9. User Control
+
+AI organization should never feel irreversible.
+
+Users can:
+
+* drag tabs between workspaces
+* remove tabs
+* create workspaces manually
+* rename workspaces
+* merge workspaces
+* split workspaces
+* archive workspaces
+* save workspaces
+* move tabs to Other
+* dismiss AI suggestions
+
+### Learning from corrections
+
+If the AI repeatedly places certain pages in the wrong workspace and the user moves them elsewhere, those interactions can become signals for future organization.
+
+The system should treat user corrections as feedback rather than assuming the initial clustering is always correct.
+
+---
+
+# 10. Other Tabs
+
+Not every page represents a project.
+
+The browser therefore maintains an area for unorganized activity.
+
+```text
+OTHER TABS
+
+YouTube
+Reddit
+Gmail
+Random Article
+```
+
+The system can still surface suggestions when it detects meaningful relationships.
+
+> "These four tabs may belong to a new workspace."
+
+**[Create Workspace] [Not Now]**
+
+This prevents the browser from forcing structure onto casual browsing.
+
+---
+
+# 11. Workspace Interface
+
+Opening a workspace expands it from a tab group into a dedicated work environment.
+
+Example:
+
+```text
+┌───────────────────────────────────────────────┐
+│  💻 Hackathon                         ✦ AI   │
+├───────────────────────────────────────────────┤
+│                                               │
+│  PLAN                                         │
+│                                               │
+│  ☑ Choose concept                             │
+│  ☑ Research architecture                      │
+│  ☐ Build prototype                            │
+│  ☐ Test                                       │
+│  ☐ Prepare demo                               │
+│                                               │
+│  SUGGESTED ACTIONS                            │
+│                                               │
+│  [Summarize] [Research] [Create Document]     │
+│  [Create Tasks] [Compare]                    │
+│                                               │
+│  TABS                                         │
+│                                               │
+│  [GitHub] [Figma] [Docs] [MCP] [...]          │
+│                                               │
+│  ┌─────────────────────────────────────────┐  │
+│  │ Ask anything about this workspace...   │  │
+│  └─────────────────────────────────────────┘  │
+└───────────────────────────────────────────────┘
+```
+
+The workspace view should feel more like an **AI command center** than a traditional tab folder.
+
+---
+
+# 12. Workspace AI
+
+Every workspace receives its own contextual AI.
+
+The user can ask questions without explaining what the workspace is.
+
+Examples:
+
+> "What have I found?"
+
+> "Summarize all of this."
+
+> "What are the important sources?"
+
+> "What did I decide?"
+
+> "What am I missing?"
+
+> "What's left on my plan?"
+
+> "What should I do next?"
+
+> "Compare the options I've been looking at."
+
+> "Turn this into a document."
+
+The workspace itself acts as the AI's context boundary.
+
+---
+
+# 13. Workspace Plans
+
+The AI can generate a lightweight plan based on the user's activity.
+
+For example:
+
+### Apartment Search
+
+```text
+PLAN
+
+☑ Determine budget
+☑ Research neighborhoods
+☑ Find apartments
+☐ Compare finalists
+☐ Schedule tours
+☐ Make decision
+```
+
+Plans are dynamic.
+
+If the user finds three suitable apartments, the AI can update the plan.
+
+If the user completes a task, the AI can mark it complete.
+
+The user can also explicitly request:
+
+> "Make me a plan."
+
+> "What's left?"
+
+> "Update my plan based on what I just found."
+
+The system should remain lightweight rather than becoming a full project-management platform.
+
+---
+
+# 14. Contextual Actions
+
+Each workspace has an action layer.
+
+Actions should be generated or selected based on what the workspace represents.
+
+### Research
+
+```text
+Summarize
+Compare Sources
+Extract Citations
+Find More Sources
+Create Literature Review
+Create Document
+```
+
+### Travel
+
+```text
+Compare Flights
+Compare Hotels
+Build Itinerary
+Find Restaurants
+Add to Calendar
+Create Trip Document
+```
+
+### Shopping
+
+```text
+Compare Products
+Compare Prices
+Find Alternatives
+Create Shopping List
+```
+
+### Coding
+
+```text
+Summarize Documentation
+Research Solution
+Create Tasks
+Create Project Brief
+```
+
+The UI should emphasize actions that are actually relevant to the current context.
+
+---
+
+# 15. Agent and Tool Layer
+
+Actions can be implemented through multiple mechanisms.
+
+Possible execution layers include:
+
+```text
+                    ACTION
+                       │
+          ┌────────────┼────────────┐
+          ↓            ↓            ↓
+         API          MCP         Agent
+          │            │            │
+          └────────────┼────────────┘
+                       ↓
+                  RESULT
+```
+
+The user should not need to know whether an action uses an API, MCP server, or agent.
+
+For example:
+
+> "Add these dates to my calendar."
+
+The system identifies the calendar capability and executes it.
+
+Or:
+
+> "Create a research document from these papers."
+
+The system gathers the relevant workspace context and invokes the appropriate document-generation capability.
+
+---
+
+# 16. Dynamic Action Discovery
+
+A major long-term capability is allowing the AI to recognize useful actions that were not explicitly designed as static buttons.
+
+For example, the workspace contains:
+
+```text
+12 research papers
+3 PDFs
+2 notes
+```
+
+The AI recognizes:
+
+> **You could create a literature review from these sources.**
+
+**[Create Literature Review]**
+
+Or:
+
+```text
+5 hotel tabs
+```
+
+The AI suggests:
+
+> **Compare these hotels**
+
+**[Create Comparison]**
+
+The browser effectively becomes an extensible action platform.
+
+Instead of:
+
+```text
+Fixed Features
+     ↓
+User chooses
+```
+
+the long-term model becomes:
+
+```text
+Workspace Context
+     ↓
+AI understands goal
+     ↓
+AI identifies useful capability
+     ↓
+AI recommends action
+     ↓
+Agent executes
+```
+
+---
+
+# 17. Global AI Command Bar
+
+The browser has a global AI command interface.
+
+Potential shortcut:
+
+**⌘K**
+
+```text
+┌─────────────────────────────────────────────┐
+│ ✦ What do you want to do?                   │
+└─────────────────────────────────────────────┘
+```
+
+Examples:
+
+> "Organize my tabs."
+
+> "Put all my shopping tabs together."
+
+> "Create a workspace for these."
+
+> "Find everything related to my CS project."
+
+> "Clean up my browser."
+
+> "What was I working on yesterday?"
+
+> "Show me my active workspaces."
+
+The command bar becomes the natural-language control layer for browser operations.
+
+---
+
+# 18. Saved Workspaces
+
+Users can explicitly save important workspaces.
+
+```text
+MY WORKSPACES
+
+💻 Hackathon
+✈️ Switzerland Trip
+📚 Research Project
+🏠 Apartment Search
+```
+
+Saved workspaces can persist indefinitely.
+
+The user can return to them even when no tabs are currently open.
+
+The workspace remains conversational.
+
+For example:
+
+> "What was the hotel I liked?"
+
+> "Why did I rule out the other option?"
+
+> "What should I do next?"
+
+---
+
+# 19. Workspace Memory
+
+Persistent memory is one of the most important aspects of the product.
+
+The AI should retain the evolution of the user's work.
+
+For example:
+
+### Monday
+
+> "I think we're going with React Native."
+
+### Wednesday
+
+> "Actually, let's use a web app."
+
+### Friday
+
+> "What architecture did we settle on?"
+
+The workspace can reconstruct the decision history.
+
+This creates a persistent context layer around work that normally gets fragmented across:
+
+* tabs
+* documents
+* browser history
+* chatbots
+* notes
+* bookmarks
+
+---
+
+# 20. Mobile Companion
+
+The mobile application is not intended to recreate the entire desktop browser.
+
+It is a **remote interface to the user's workspaces**.
+
+The user can see:
+
+```text
+MY WORKSPACES
+
+💻 Hackathon
+✈️ Switzerland Trip
+📚 Research
+🛍 Shopping
+```
+
+Selecting one opens its AI interface.
+
+Users can:
+
+* ask questions
+* review plans
+* access context
+* trigger actions
+* add notes
+* use voice
+
+---
+
+# 21. Voice Interface
+
+The mobile app should provide voice-first interaction.
+
+Example:
+
+**User**
+
+> "What's going on with my hackathon?"
+
+**AI**
+
+> "You decided to build the browser extension version. You've researched tab clustering and MCP integrations, and your remaining tasks are the workspace UI and demo."
+
+User:
+
+> "Summarize everything we've decided."
+
+AI generates the summary.
+
+User:
+
+> "Save that to the workspace."
+
+The workspace is updated.
+
+---
+
+# 22. Voice Actions
+
+Voice should be able to trigger the same actions as text.
+
+Examples:
+
+> "Create a summary of my research."
+
+> "Find three more sources."
+
+> "Add these events to my calendar."
+
+> "Update my plan."
+
+> "Compare the hotels I've found."
+
+> "Create a document from this workspace."
+
+Voice is therefore not simply a chatbot interface.
+
+It is another interface for controlling the workspace agent.
+
+---
+
+# 23. Voice Architecture
+
+A potential pipeline:
+
+```text
+USER SPEAKS
+     ↓
+Speech-to-Text
+     ↓
+Workspace Context
+     ↓
+AI / Agent
+     ↓
+Tool or Action
+     ↓
+Result
+     ↓
+Text Response
+     ↓
+ElevenLabs
+     ↓
+VOICE RESPONSE
+```
+
+ElevenLabs can provide the natural spoken response layer.
+
+The important architectural concept is that voice, text, and desktop interactions all operate on the **same workspace state**.
+
+---
+
+# 24. Browser ↔ Mobile Continuity
+
+A workspace should never feel device-specific.
+
+```text
+                       WORKSPACE
+                           │
+             ┌─────────────┼─────────────┐
+             │             │             │
+          Desktop        Mobile        Voice
+             │             │             │
+             └─────────────┼─────────────┘
+                           │
+                    Shared Context
+```
+
+Example:
+
+The user researches hotels on desktop.
+
+Later:
+
+> "What hotels did I find?"
+
+The mobile app accesses the same workspace.
+
+The user says:
+
+> "Add a note that I want to research Hotel B tomorrow."
+
+The note becomes part of the workspace.
+
+When the user returns to desktop, the workspace has already been updated.
+
+---
+
+# 25. Agent Capabilities
+
+The long-term agent should be able to execute increasingly complex tasks.
+
+Examples:
+
+### Simple
+
+> "Summarize these pages."
+
+### Tool-based
+
+> "Add this to my calendar."
+
+### Multi-step
+
+> "Compare the hotels I've researched and make a recommendation table."
+
+### Research
+
+> "Find three additional sources that support this research."
+
+### Creation
+
+> "Turn this research into a document."
+
+The system should use the least complex execution mechanism necessary.
+
+```text
+Simple operation
+      ↓
+API / MCP
+
+Multi-step operation
+      ↓
+Specialized agent
+
+Browser interaction
+      ↓
+Browser agent
+```
+
+Computer-use/mouse control should not be required for the core MVP.
+
+---
+
+# 26. Technical Architecture
+
+Initial architecture:
+
+```text
+                 CHROME EXTENSION
+                        │
+                        ▼
+                 TAB INGESTION
+                        │
+                        ▼
+                PAGE CONTEXT LAYER
+                        │
+                        ▼
+                 AI ORGANIZER
+                        │
+                        ▼
+                  WORKSPACE DB
+                 /      │       \
+                /       │        \
+              Tabs    Context    Plans
+                        │
+                        ▼
+                  WORKSPACE AI
+                        │
+          ┌─────────────┼─────────────┐
+          ▼             ▼             ▼
+       Actions        Agents         Tools
+          │             │             │
+          └─────────────┼─────────────┘
+                        │
+                        ▼
+                   MOBILE APP
+                        │
+                        ▼
+                 VOICE INTERFACE
+                        │
+                        ▼
+                    ELEVENLABS
+```
+
+---
+
+# 27. Initial Platform Strategy
+
+## Phase 1: Chrome Extension + Web App
+
+The fastest implementation should avoid building an entire browser.
+
+### Extension
+
+Responsible for:
+
+* reading tabs
+* accessing page content
+* detecting tab changes
+* assigning tabs to workspaces
+* moving/reorganizing tabs
+* communicating with the workspace backend
+
+### Web App
+
+Responsible for:
+
+* workspace UI
+* AI chat
+* plans
+* persistent context
+* actions
+* generated content
+* workspace history
+
+This allows the team to demonstrate the product without needing to build browser infrastructure.
+
+---
+
+# 28. Long-Term Browser
+
+If the product proves useful, the extension architecture can evolve toward an AI-native Chromium-based browser.
+
+A full browser provides greater control over:
+
+* tab UI
+* workspace navigation
+* browser state
+* AI command interfaces
+* page context
+* agent interaction
+* workspace persistence
+
+The extension is therefore the **MVP implementation**, not necessarily the final product architecture.
+
+---
+
+# 29. One-Week Hackathon MVP
+
+The MVP should prove one thing:
+
+> **Can AI turn a messy collection of browser tabs into a useful, persistent workspace?**
+
+### P0 — Required
+
+#### Tab ingestion
+
+Capture:
+
+* URL
+* title
+* page content
+
+#### AI clustering
+
+Automatically identify related tabs.
+
+#### Workspace creation
+
+Create named groups based on the user's activity.
+
+#### Workspace UI
+
+Show:
+
+* tabs
+* workspace context
+* plan
+* actions
+* AI chat
+
+#### Persistence
+
+Workspaces survive browser sessions.
+
+#### Manual correction
+
+Drag tabs between workspaces.
+
+#### Workspace AI
+
+Ask questions about the workspace.
+
+#### Plan generation
+
+Generate a contextual checklist.
+
+#### Actions
+
+Implement several actions that actually execute.
+
+#### Global command bar
+
+Support commands such as:
+
+> "Organize my tabs."
+
+---
+
+# 30. P1 — Strong Demo Features
+
+If time permits:
+
+* workspace renaming
+* saved workspaces
+* AI organization suggestions
+* workspace history
+* contextual action recommendations
+* document generation
+* research action
+* calendar integration
+* better workspace memory
+
+---
+
+# 31. P2 — Stretch
+
+### Mobile
+
+View and interact with workspaces.
+
+### Voice
+
+Talk to workspaces.
+
+### ElevenLabs
+
+Natural spoken responses.
+
+### Dynamic actions
+
+AI identifies new useful actions.
+
+### Cross-device continuity
+
+Desktop and mobile share real-time workspace state.
+
+---
+
+# 32. Demo Scenario
+
+A strong demonstration should show the product rather than explain it.
+
+### Step 1
+
+Open a messy browser containing:
+
+```text
+5 hotel tabs
+4 flight tabs
+3 restaurant pages
+2 Reddit discussions
+3 random tabs
+```
+
+### Step 2
+
+AI automatically produces:
+
+```text
+✈️ Trip Planning
+   14 tabs
+
+OTHER
+   3 tabs
+```
+
+### Step 3
+
+Open the workspace.
+
+AI has generated:
+
+```text
+PLAN
+
+☑ Research destinations
+☑ Compare hotels
+☐ Compare flights
+☐ Build itinerary
+```
+
+### Step 4
+
+Ask:
+
+> "What have I found so far?"
+
+The AI answers using the workspace's pages.
+
+### Step 5
+
+Ask:
+
+> "Compare the hotels I've been looking at."
+
+The system creates a comparison.
+
+### Step 6
+
+Ask:
+
+> "Create an itinerary from everything I've researched."
+
+The agent generates one.
+
+### Step 7
+
+Close the browser.
+
+Reopen later.
+
+The workspace remains.
+
+### Step 8
+
+Open the phone.
+
+Say:
+
+> "What's left for my trip?"
+
+The same workspace responds.
+
+This demonstrates the entire product thesis:
+
+**Browse → Understand → Organize → Remember → Act → Continue**
+
+---
+
+# 33. Differentiation
+
+The individual components are not necessarily novel on their own.
+
+AI tab grouping exists.
+
+AI browser assistants exist.
+
+MCP exists.
+
+AI agents exist.
+
+Voice assistants exist.
+
+The differentiation is the **system they form together**.
+
+The core primitive is not:
+
+> "AI that groups tabs."
+
+It is:
+
+> **A persistent workspace that understands the user's browser activity.**
+
+The workspace becomes the bridge between:
+
+* browsing
+* memory
+* planning
+* AI
+* tools
+* agents
+* actions
+* devices
+
+---
+
+# 34. Product Philosophy
+
+Traditional browser:
+
+> **What page do you want to open?**
+
+AI Browser:
+
+> **What are you trying to accomplish?**
+
+Traditional browser:
+
+```text
+Tab
+↓
+Page
+```
+
+AI Browser:
+
+```text
+Tab
+↓
+Context
+↓
+Workspace
+↓
+Plan
+↓
+Action
+↓
+Progress
+```
+
+The user should not have to manually decide:
+
+* which tabs belong together
+* what information matters
+* what to remember
+* what tasks remain
+* what tool to use
+* what context to give the AI
+
+The browser should infer structure while allowing the user to correct it.
+
+---
+
+# 35. Final Product Vision
+
+AI Browser turns the browser from a collection of pages into a persistent environment for work.
+
+You browse normally.
+
+The AI understands what you're doing.
+
+Related tabs become workspaces.
+
+Workspaces remember your context.
+
+The AI creates plans.
+
+Actions appear based on what you're trying to accomplish.
+
+Agents can execute those actions.
+
+The same workspace follows you across desktop and mobile.
+
+### Core positioning
+
+> **AI Browser is a browser that understands your work.**
+
+### Expanded pitch
+
+> **AI Browser automatically turns your messy tabs into intelligent, persistent workspaces that understand what you're working on, remember your context, help you plan, and can take action on your behalf.**
+
+### Mental model
+
+> **Cursor for the browser.**

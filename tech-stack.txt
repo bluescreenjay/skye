@@ -1,0 +1,119 @@
+AI Browser — Tech Stack & Feature Split
+=======================================
+Derived from initialspec.txt for constitution + Spec Kit feature planning.
+Last updated: 2026-09-19
+
+PRODUCT CONSTRAINTS (from spec)
+-------------------------------
+- MVP: Chrome extension + web application (NOT a full browser)
+- Extension: tab/page access and organization
+- Web app: workspace state, AI context, plans, conversations, actions
+- Core loop: Tab → Context → Workspace → Plan → Actions
+- Stretch: mobile companion, voice (ElevenLabs), MCP, dynamic action discovery
+- Long-term: optional Chromium-based browser
+
+RECOMMENDED STACK (hackathon MVP)
+---------------------------------
+
+Layer              Choice                                      Why
+-----              ------                                      ---
+Language           TypeScript everywhere                       One language across extension, web, API
+Extension          Chrome MV3 + Vite + CRXJS (or Plasmo)       Fast tab/content access
+Web app            Next.js (App Router)                        Workspace UI + API routes in one repo
+UI                 React + Tailwind                            Speed over design system purity
+API / realtime     Next.js Route Handlers + Supabase Realtime  Enough for desktop↔mobile later
+DB                 Supabase Postgres                           Persistence, auth, realtime without ops
+Auth               Supabase Auth or device pairing token       Skip full OAuth if demoing solo
+AI                 Claude or GPT-4.1 via one provider SDK      Clustering, chat, plans, command bar
+Clustering (MVP)   LLM classify on title+URL+snippet           Skip vector DB until P1
+Embeddings (P1)    OpenAI/Voyage + pgvector                    Better continuous organization
+Actions            Hard-coded tools + LLM tool-calling         3–5 real actions for demo
+MCP / agents       Interface stubs only                        Spec stretch — out of MVP
+Mobile / voice     Expo + ElevenLabs                           Stretch only
+Monorepo           pnpm: apps/extension, apps/web,             Shared Workspace/Tab/Plan types
+                   packages/shared
+
+ARCHITECTURE
+------------
+Chrome extension  →  tab/page ingestion, drag-move tabs
+        ↓ HTTPS
+Next.js / Supabase ← workspace state, AI, plans, actions, chat
+        ↑
+Web app UI (+ mobile later)
+
+DELIBERATE NON-CHOICES (week 1)
+-------------------------------
+- Full Chromium fork
+- Computer-use / mouse-control agents
+- Vector search as a hard dependency
+- Native mobile
+- Dynamic action discovery as required
+
+CONSTITUTION PRINCIPLES (locked)
+--------------------------------
+1. Workspace-first — Unit of product is the workspace, not the tab.
+   Tabs are inputs; workspaces own memory, plan, chat, and actions.
+2. Extension observes; app decides — Extension captures and applies tab
+   moves; server owns clustering, persistence, and AI context.
+3. User corrections win — Manual drag/rename/merge/Other always overrides
+   AI; corrections are learning signals.
+4. Least-power actions — Prefer simple tools/APIs over agents; no
+   computer-use in MVP.
+5. One TypeScript surface — Shared types for Workspace/Tab/Plan/Message;
+   no parallel models across clients.
+6. Demo-hard, architecture-soft — Ship the core loop
+   (ingest → cluster → persist → correct → chat → plan → actions → ⌘K)
+   before polish or stretch platforms.
+
+FEATURE SPLIT (SpecKit-sized, dependency order)
+-----------------------------------------------
+001  Monorepo + shared domain model
+     Workspace, Tab, Plan, Message types; env; Supabase schema skeleton
+
+002  Tab ingestion extension
+     MV3: list tabs, title/URL/snippet, change events, push to API
+
+003  Workspace persistence API
+     CRUD workspaces/tabs; session survival; "Other" bucket
+
+004  AI clustering
+     Cluster open tabs → named workspaces; low confidence → suggest
+
+005  Workspace UI
+     List workspaces; detail: tabs, plan, actions, chat shell
+
+006  Manual correction
+     Drag between workspaces/Other; rename; create; sync moves to Chrome
+
+007  Workspace AI chat
+     Per-workspace context from tabs/snippets; Q&A without re-explaining
+
+008  Plan generation
+     Checklist from activity; update/complete via chat
+
+009  Contextual actions (fixed set)
+     e.g. Summarize, Compare tabs, Create doc, Create tasks — real exec
+
+010  Global command bar (⌘K)
+     "Organize my tabs", "Create workspace for these", "Clean up"
+
+011 (P1) Saved workspaces + soft suggestions
+012 (stretch) Mobile companion + voice
+
+MVP CUT LINE: ship 001–010. Everything else is polish or stretch.
+
+MINIMAL DATA MODEL
+------------------
+User
+Workspace { id, name, emoji?, status: active|saved|archived, created_at }
+TabRef { workspace_id|null(Other), url, title, snippet, chrome_tab_id?, last_seen }
+PlanItem { workspace_id, text, done, order }
+Message { workspace_id, role, content }
+ActionRun { workspace_id, action_id, input, output, status }
+Correction { from_ws, to_ws, tab_signals }
+
+SPECKIT NEXT STEPS
+------------------
+1. /speckit-constitution — lock principles + stack (this file is input)
+2. /speckit-specify per feature in order 001 → 010
+3. /speckit-plan pinning: Next.js + MV3 + Supabase + Claude/GPT + pnpm monorepo
