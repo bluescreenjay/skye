@@ -34,6 +34,8 @@ function greetingText(weather: string, cards: HomeDirectory["cards"]): string {
 export function Home() {
   const [directory, setDirectory] = useState<HomeDirectory>({ other: [], cards: [] });
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [recentWorkspaceIds, setRecentWorkspaceIds] = useState<string[]>([]);
+  const [risingWorkspaceId, setRisingWorkspaceId] = useState<string | null>(null);
   const [weather, setWeather] = useState("checking");
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -50,6 +52,16 @@ export function Home() {
   const dragId = useRef<string | null>(null);
   const dragRaf = useRef<number | null>(null);
   const organizing = useRef(false);
+  const riseTimer = useRef<number | null>(null);
+
+  const orderedCards = [...directory.cards].sort((left, right) => {
+    const leftRecent = recentWorkspaceIds.indexOf(left.workspace.id);
+    const rightRecent = recentWorkspaceIds.indexOf(right.workspace.id);
+    if (leftRecent === -1 && rightRecent === -1) return 0;
+    if (leftRecent === -1) return 1;
+    if (rightRecent === -1) return -1;
+    return leftRecent - rightRecent;
+  });
 
   const refresh = useCallback(async () => {
     const { workspaces, tabRefs } = await loadDirectory();
@@ -190,10 +202,18 @@ export function Home() {
     void openHomeTab(tab);
   };
 
+  const toggleWorkspace = (workspaceId: string) => {
+    setRecentWorkspaceIds((current) => [workspaceId, ...current.filter((id) => id !== workspaceId)]);
+    setRisingWorkspaceId(workspaceId);
+    if (riseTimer.current != null) window.clearTimeout(riseTimer.current);
+    riseTimer.current = window.setTimeout(() => setRisingWorkspaceId(null), 650);
+    setExpandedId((current) => (current === workspaceId ? null : workspaceId));
+  };
+
   const toggleCard = (workspaceId: string) => (event: MouseEvent) => {
     if ((event.target as HTMLElement).closest(".ws-name, .app-icon")) return;
     if (afterDragClick(event)) return;
-    setExpandedId((current) => (current === workspaceId ? null : workspaceId));
+    toggleWorkspace(workspaceId);
   };
 
   const commitRename = async (workspace: Workspace, next: string) => {
@@ -241,7 +261,7 @@ export function Home() {
         </div>
         <div className="rail-divider" />
         <div className="rail-section rail-saved">
-          {directory.cards.map((card) => (
+          {orderedCards.map((card) => (
             <button
               key={card.workspace.id}
               className={`group-tile${dropTarget === card.workspace.id ? " is-drop" : ""}${expandedId === card.workspace.id ? " is-selected" : ""}`}
@@ -249,9 +269,7 @@ export function Home() {
               title={card.workspace.name.toLowerCase()}
               onClick={(event) => {
                 if (afterDragClick(event)) return;
-                setExpandedId((current) =>
-                  current === card.workspace.id ? null : card.workspace.id,
-                );
+                toggleWorkspace(card.workspace.id);
               }}
               {...bindDrop(card.workspace.id)}
             >
@@ -295,11 +313,12 @@ export function Home() {
           <button type="button" className="organize-btn pairing-btn" onClick={togglePairing}>pair phone</button>
         </div>
         {pairingOpen ? <PairingPanel offer={offer} devices={devices} message={pairingMessage} onNewCode={startPairing} onRevoke={async (id) => { if (await revokeDevice(id)) refreshDevices(); }} /> : null}
-        {directory.cards.map((card) => (
+        {orderedCards.map((card) => (
           <WorkspaceCardView
             key={card.workspace.id}
             card={card}
             expanded={expandedId === card.workspace.id}
+            isRising={risingWorkspaceId === card.workspace.id}
             dropTarget={dropTarget}
             draggingId={draggingId}
             bindDrop={bindDrop}
@@ -326,6 +345,7 @@ function PairingPanel({ offer, devices, message, onNewCode, onRevoke }: { offer:
 function WorkspaceCardView({
   card,
   expanded,
+  isRising,
   dropTarget,
   draggingId,
   bindDrop,
@@ -337,6 +357,7 @@ function WorkspaceCardView({
 }: {
   card: HomeDirectory["cards"][number];
   expanded: boolean;
+  isRising: boolean;
   dropTarget: string | null;
   draggingId: string | null;
   bindDrop: (target: string) => {
@@ -353,7 +374,7 @@ function WorkspaceCardView({
 
   return (
     <article
-      className={`card${expanded ? " is-open" : ""}${dropTarget === card.workspace.id ? " is-drop" : ""}`}
+      className={`card${expanded ? " is-open" : ""}${isRising ? " is-rising" : ""}${dropTarget === card.workspace.id ? " is-drop" : ""}`}
       data-id={card.workspace.id}
       {...bindDrop(card.workspace.id)}
     >
@@ -373,7 +394,7 @@ function WorkspaceCardView({
               onDragEnd={onDragEnd}
               onClick={onOpenTab(tab)}
             >
-              <TabMark url={tab.url} title={tab.title} size={22} />
+              <TabMark url={tab.url} title={tab.title} size={16} />
             </span>
           ))}
         </div>

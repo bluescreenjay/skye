@@ -15,7 +15,8 @@
   --radius: 14px;
   --radius-sm: 8px;
   --pad: 24px;
-  --ease-in: cubic-bezier(0.42, 0, 1, 1);
+  --ease-in: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 *,
@@ -138,7 +139,7 @@ input:focus,
   max-width: 36px;
   padding: 4px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 0;
   background: var(--accent-06);
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -165,6 +166,10 @@ input:focus,
   object-fit: cover;
   user-select: none;
   pointer-events: none;
+}
+
+.mark-favicon {
+  object-fit: contain;
 }
 
 .mark.sz-16 {
@@ -418,6 +423,7 @@ input:focus,
   flex-direction: column;
   cursor: default;
   background: var(--card-open);
+  animation: expand-in 0.52s var(--ease-spring) both;
 }
 
 .card-thirds {
@@ -459,14 +465,14 @@ input:focus,
 }
 
 .card-head .app-icon {
-  width: 56px;
-  height: 56px;
-  flex: 0 0 56px;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
 }
 
 .card-head .app-icon .mark {
-  width: 56px;
-  height: 56px;
+  width: 44px;
+  height: 44px;
 }
 
 .card.is-open .card-head .app-icon {
@@ -520,6 +526,20 @@ input:focus,
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes workspace-rise {
+  from {
+    opacity: 0.72;
+    transform: translateY(18px) scale(0.985);
+  }
+  72% {
+    transform: translateY(-2px) scale(1.002);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -584,9 +604,9 @@ input:focus,
 
 @keyframes icon-shrink {
   from {
-    width: 56px;
-    height: 56px;
-    flex-basis: 56px;
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
   }
   to {
     width: 36px;
@@ -602,9 +622,9 @@ input:focus,
     flex-basis: 36px;
   }
   to {
-    width: 56px;
-    height: 56px;
-    flex-basis: 56px;
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
   }
 }
 
@@ -689,7 +709,13 @@ input:focus,
 }
 
 .card.is-rising {
-  animation: card-rise 0.55s var(--ease-in) both;
+  animation: workspace-rise 0.62s var(--ease-spring) both;
+}
+
+.card.is-open.is-rising {
+  animation:
+    expand-in 0.52s var(--ease-spring) both,
+    workspace-rise 0.62s var(--ease-spring) both;
 }
 
 .card.is-expanding {

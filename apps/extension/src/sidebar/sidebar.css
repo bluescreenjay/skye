@@ -266,6 +266,10 @@ input:focus {
   pointer-events: none;
 }
 
+.mark-favicon {
+  object-fit: contain;
+}
+
 .mark.sz-16 {
   width: 16px;
   height: 16px;
