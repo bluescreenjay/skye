@@ -26,9 +26,9 @@ export function toolAllowedFor(userId: string, tool: ToolDef, facts: AccessFacts
 
 export function connectedIntegrations(userId: string): IntegrationId[] {
   const owner = isOwner(userId);
-  const ids: IntegrationId[] = ["github", "jira", "notion", "slack", "drive", "gmail"];
+  const ids: IntegrationId[] = ["github", "jira", "notion", "slack", "drive", "gmail", "calendar"];
   return ids.filter((id) => {
-    if ((id === "drive" || id === "gmail") && !owner) return false;
+    if ((id === "drive" || id === "gmail" || id === "calendar") && !owner) return false;
     return connectionStatus(id) === "connected";
   });
 }

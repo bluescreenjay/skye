@@ -66,6 +66,8 @@ function ResultText({ result, onOpenTab, onCopy }: { result: ToolResult; onOpenT
       );
     case "mail_search":
       return <p className="ax-note">{`${result.shown} messages were shown; they are not kept`}</p>;
+    case "calendar_events":
+      return <p className="ax-note">{`${result.shown} events were shown; they are not kept`}</p>;
     case "email_preview":
       return (
         <div className="ax-mail">
@@ -82,6 +84,9 @@ function ResultText({ result, onOpenTab, onCopy }: { result: ToolResult; onOpenT
  * Suggested actions for an expanded workspace card. Draws only the returned suggestions, never the
  * catalog. Polls GET /actions only while a run is going. Unreachable server: keep what is on screen.
  */
+/** One line of the owner's calendar look-up. Text only. */
+type CalendarRow = { title: string; start: string; end: string; allDay: boolean };
+
 export function ActionsGroup({ workspaceId, onOpenTab, executeIntents, onCopy }: ActionsGroupProps) {
   const config = useMemo(() => loadConfig(import.meta.env), []);
   const [suggestions, setSuggestions] = useState<ActionSuggestion[]>([]);
@@ -95,6 +100,8 @@ export function ActionsGroup({ workspaceId, onOpenTab, executeIntents, onCopy }:
   const [hovering, setHovering] = useState(false);
   const [recipient, setRecipient] = useState<Record<string, string>>({});
   const [mailByRun, setMailByRun] = useState<Record<string, { from: string; subject: string; date: string; excerpt: string }[]>>({});
+  // The owner's calendar look-up: held in memory for this card only, never stored, and gone on reload.
+  const [calendarByRun, setCalendarByRun] = useState<Record<string, CalendarRow[]>>({});
   const started = useRef(new Set<string>());
   const executedIntents = useRef(new Set<string>());
   const alive = useRef(true);
@@ -211,10 +218,14 @@ export function ActionsGroup({ workspaceId, onOpenTab, executeIntents, onCopy }:
       next.delete(suggestion.toolId);
       return next;
     });
-    if (outcome.kind === "started" || outcome.kind === "mail") {
+    if (outcome.kind === "started" || outcome.kind === "mail" || outcome.kind === "calendar") {
       setUnreachable(false);
       started.current.add(outcome.run.id);
       setRuns((current) => [outcome.run, ...current.filter((run) => run.toolId !== outcome.run.toolId)]);
+      if (outcome.kind === "calendar") {
+        const events = (outcome.calendar as { events?: unknown })?.events;
+        if (Array.isArray(events)) setCalendarByRun((current) => ({ ...current, [outcome.run.id]: events as CalendarRow[] }));
+      }
       if (outcome.kind === "mail" && Array.isArray(outcome.mail)) {
         setMailByRun((current) => ({ ...current, [outcome.run.id]: outcome.mail as { from: string; subject: string; date: string; excerpt: string }[] }));
       }
@@ -344,6 +355,11 @@ export function ActionsGroup({ workspaceId, onOpenTab, executeIntents, onCopy }:
             {mailByRun[run?.id ?? ""]?.map((message, i) => (
               <p className="ax-text" key={i}>
                 {message.from} · {message.subject} · {message.excerpt}
+              </p>
+            ))}
+            {calendarByRun[run?.id ?? ""]?.map((event, i) => (
+              <p className="ax-text" key={i}>
+                {event.title} · {event.allDay ? `${event.start} (all day)` : `${event.start} to ${event.end}`}
               </p>
             ))}
             {run && resultLines(run).length === 0 && run.state === "succeeded" ? <p className="ax-note">done</p> : null}

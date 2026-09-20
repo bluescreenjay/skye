@@ -30,6 +30,8 @@ function previewOf(tool: ToolDef, args: Record<string, unknown>): SuggestionPrev
     if (text.length > PREVIEW_VALUE_CHARS) text = `${text.slice(0, PREVIEW_VALUE_CHARS - 1)}…`;
     fields.push({ name: name.replace(/([A-Z])/g, " $1").replace(/_/g, " ").toLowerCase(), value: text });
   }
+  // FR-050: what will be created is on the button before the click, including that nobody is invited.
+  if (tool.id === "calendar_create_event") fields.push({ name: "guests", value: "none (no invitations are sent)" });
   return fields;
 }
 

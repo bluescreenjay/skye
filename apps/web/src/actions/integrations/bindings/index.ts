@@ -3,6 +3,7 @@ import { JIRA_BINDINGS } from "./jira";
 import { NOTION_BINDINGS } from "./notion";
 import { SLACK_BINDINGS } from "./slack";
 import { DRIVE_BINDINGS, GMAIL_BINDINGS } from "./drive";
+import { CALENDAR_BINDINGS } from "./calendar";
 
 export type { Binding };
 
@@ -13,6 +14,7 @@ export const ALL_BINDINGS: Binding[] = [
   ...SLACK_BINDINGS,
   ...DRIVE_BINDINGS,
   ...GMAIL_BINDINGS,
+  ...CALENDAR_BINDINGS,
 ];
 
 export function bindingFor(toolId: string): Binding | undefined {

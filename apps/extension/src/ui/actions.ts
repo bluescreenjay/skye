@@ -104,6 +104,7 @@ export async function listActions(
 export type RunOutcome =
   | { kind: "started"; run: ToolRunView }
   | { kind: "mail"; run: ToolRunView; mail: unknown }
+  | { kind: "calendar"; run: ToolRunView; calendar: unknown }
   | { kind: "already_running" }
   | { kind: "refused"; status: number; code: string | null; message: string }
   | { kind: "unreachable" };
@@ -130,6 +131,7 @@ export async function runTool(
   const json = await jsonOf(response);
   if ((response.status === 202 || response.status === 200) && isRun(json.run)) {
     if (response.status === 200 && json.mail) return { kind: "mail", run: json.run, mail: json.mail };
+    if (response.status === 200 && json.calendar) return { kind: "calendar", run: json.run, calendar: json.calendar };
     return { kind: "started", run: json.run };
   }
   const code = isString(json.code) ? json.code : null;
@@ -270,6 +272,8 @@ export function resultLines(run: ToolRunView): string[] {
       return [result.subject, result.body];
     case "mail_search":
       return [`${result.shown} messages were shown; they are not kept`];
+    case "calendar_events":
+      return [`${result.shown} events were shown; they are not kept`];
   }
 }
 

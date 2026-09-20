@@ -8,8 +8,6 @@
 
 **Input**: User description: "Add stretch feature 010b: real action tools on top of workspace agents, without replacing the LLM provider (VT ARC default, Gemini backup). Build a server-side tool registry and MCP client with the full catalog. The UI must NOT show every tool all the time. A suggestion agent (user-triggered or on workspace open/refresh) reads workspace context plus which integrations are connected, picks a small ranked set of best next actions (about 3–6), and the product dynamically creates buttons for only those (label, tool id, optional prefilled args, short rationale). Tools run only when the user clicks a button. After a run, suggestions may refresh. Omit tools that need missing credentials. Local / first-party tools (no third-party account): list workspace tabs, read public pages (reuse 010 safe fetch), write summary, export summary as markdown and as PDF, open related tabs, open Google searches, save search queries, append plan items, save refs, copy text, compose share link. Tab-opening and file download that must happen in Chrome are returned as intents for the extension to execute. MCP-backed tools for six integrations: GitHub (create issue, create gist, search, comment on issue); Notion (create page, append blocks, search); Slack (post message, upload snippet); Jira (create issue, search, add comment); Google Drive (upload markdown, create doc from summary, get share link); Gmail (create draft, send message, search). Credentials from env or per-user secrets; missing auth fails clearly and keeps those tools out of suggestions. Bounded tool loop on click (small max turns). Do not require MCP for the original 010 one-shot agents. No computer-use, no always-on full catalog UI, no arbitrary user-installed MCP servers, no swap of VT ARC, no silent tool execution without a click. Fully testable with fake MCP/suggestion/local executors. Home shows external result links/ids on successful SaaS tools."
 
-**Amendment (2026-09-20)**: Google Calendar is added as a **seventh integration**, at the requester's request after the tool layer was built. It follows the same rules as Drive and Gmail: the owner's Google account, owner only, one small action per click. Changed by this amendment: User Story 7, FR-031, FR-032, FR-033, FR-038, FR-040, FR-041, Key Entities, SC-012, SC-014, Assumptions, and Out of scope; added: FR-049 to FR-052, SC-017, SC-018. Everything else is unchanged. `plan.md`, `data-model.md`, `contracts/`, and `tasks.md` predate it and need a `/speckit-plan` refresh and new tasks before Calendar is built.
-
 ## Clarifications
 
 ### Session 2026-09-19
@@ -26,16 +24,6 @@ Answers marked (asked) were given by the requester; the rest were assumed withou
 - Q: May the AI ever see the owner's email (subjects, senders, or excerpts), for example to write a draft that references a message? → A: (asked) Never. Mail search results are shown to the owner only. The AI service never receives any mail content, and drafts are written only from workspace material.
 - Q: Should the suggestion pass ask the AI for ideas automatically every time a workspace card is opened, or only when the person presses a "suggest actions" button? → A: (asked) Automatically on open. Opening a card asks the AI for a ranked set of about three to six suggestions fitted to the workspace, and a refresh button asks again, so the right buttons are there as soon as the card opens. This is the one place the product asks the AI without a press; it is an explicit exception to 010's press-only rule, limited to proposing buttons (a suggestion request never runs a tool), and it means the workspace's tab titles, summary, and checklist are sent to the AI service on each open.
 - Q: When someone clicks one suggested button, may the AI use other tools during that same click, beyond the one on the button? → A: (asked) Only read-only helpers plus the button's own action. During a click the AI may look things up (list the workspace's tabs, read public pages, search GitHub, Jira, or Notion; mail search is never a helper the AI can use), but the only thing that can create, change, post, or send anything is the tool the button names.
-
-### Session 2026-09-20
-
-The first answer was given by the requester; the rest were assumed (each is also listed under Assumptions or Requirements) and can be changed:
-
-- Q: Is Google Calendar in scope? → A: (asked) Yes. It is the seventh integration, added by request after the tool layer was built. Before this amendment it was not mentioned.
-- Q: Whose calendar, and who may use it? → A: The deployment owner's own calendar, and the owner only: the same account and the same rule as Drive and Gmail. For anyone else it is never suggested and always refused, with the same plain "not available" whether or not Google is connected.
-- Q: What can it do? → A: Two things: put an event on the owner's calendar, and show the owner what is on their calendar around a day. Nothing edits or deletes an existing event.
-- Q: Does creating an event invite anyone? → A: No. An event is for the owner alone: no guests, no invitations, and no notification goes to anyone. Inviting people is the calendar's version of sending an email and is out of scope.
-- Q: May the AI ever see the owner's calendar (titles, times, guests, or locations of existing events)? → A: Never, the same rule as mail. What is on the calendar is shown to the owner only, never reaches the AI service, and is not kept in the workspace. Events are written only from workspace material.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -156,21 +144,18 @@ Each appears as a suggestion only when that service is connected, and on success
 
 ---
 
-### User Story 7 - Push to Google: Drive, Gmail, and Calendar (Priority: P2)
+### User Story 7 - Push to Google: Drive and Gmail (Priority: P2)
 
 With Google access set up for the deployment's owner, the owner (and only the owner) can:
 
 - **Drive**: upload the summary as a Markdown file, create a document from the summary, and get a shareable link for what was created.
 - **Gmail**: create a draft email from workspace material (for example, sending the summary to a colleague), search their mail for related messages, and send a message.
-- **Calendar**: put an event on their own calendar from workspace material (for example a trip date, a deadline, or a follow-up), and look at what is already on their calendar around a day.
 
 Sending an email is the most consequential action in the catalog, so it has an extra step: the person is shown the exact recipient, subject, and body and must confirm that specific message; a suggestion alone never sends anything, and creating a draft is the default suggestion.
 
-An event is only ever for the owner: it has no guests and sends no invitations. What the button will create (title, day, and start and end times) is shown on the button before it is clicked.
+**Why this priority**: Google Drive and Gmail are where most people actually keep and share work, and Gmail was added to the integrations at the person's request. It follows the shared behavior and the other services, and it needs the most care because it touches private mail.
 
-**Why this priority**: Google Drive, Gmail, and Calendar are where most people actually keep, share, and schedule work; Gmail and Calendar were added to the integrations at the person's request. It follows the shared behavior and the other services, and it needs the most care because it touches private mail and a private calendar.
-
-**Independent Test**: With fake connectors: Drive upload and create-document runs each return a link or id, and the share-link action returns a link for an existing one; a Gmail draft is created with the prefilled recipient, subject, and body and the run shows where the draft is; a send does nothing until the exact message is confirmed, and sends only that message once; mail search shows a short list of matches and changes nothing; a Calendar event is created once with the prefilled title and times, with no guests, and the run shows its link; a calendar look-up shows a short list to the owner and changes nothing.
+**Independent Test**: With fake connectors: Drive upload and create-document runs each return a link or id, and the share-link action returns a link for an existing one; a Gmail draft is created with the prefilled recipient, subject, and body and the run shows where the draft is; a send does nothing until the exact message is confirmed, and sends only that message once; mail search shows a short list of matches and changes nothing.
 
 **Acceptance Scenarios**:
 
@@ -179,18 +164,14 @@ An event is only ever for the owner: it has no guests and sends no invitations. 
 3. **Given** Gmail is connected, **When** the person clicks "draft an email with this summary", **Then** one draft is created (recipient left for the person to fill in unless it was prefilled) and the run shows that a draft was saved and where; no email is sent.
 4. **Given** the person clicks "send", **When** the confirmation step appears, **Then** it shows the exact recipient, subject, and body; only if they confirm is that one message sent, and cancelling sends nothing.
 5. **Given** the person searches their mail from the card, **When** results come back, **Then** only sender, subject, date, and a short excerpt of a small number of messages are shown to them, the AI never receives any of it, and mail content is never saved into the workspace unless they save it.
-6. **Given** Google access is missing or expired, **When** suggestions are made, **Then** no Drive, Gmail, or Calendar action is suggested; a direct request fails with a plain "connect Google" message.
-7. **Given** a person who is not the deployment's owner, **When** suggestions are made or they request a Drive, Gmail, or Calendar action directly, **Then** no such action is suggested, the request is refused with a plain "not available" message, and nothing of the owner's mail, files, or calendar is read, created, sent, or shown.
-8. **Given** Calendar is connected, **When** the owner clicks "add to my calendar" (title, day, and start and end times prefilled and shown on the button), **Then** exactly one event is created on their calendar with those details, it has no guests and sends no invitations, and the run shows the event's link or id.
-9. **Given** the prefilled event has no title, a day or time that is not real, or an end before its start, **When** the owner clicks, **Then** nothing is created and a plain message says what is wrong; a blank or guessed-at event is never created.
-10. **Given** the owner clicks "what's on my calendar", **When** results come back, **Then** only the title, day, and start and end times of a small number of events are shown to them once and not kept, the AI never receives any of it, nothing on the calendar is changed, and it is not saved into the workspace unless they save it.
-11. **Given** the owner's calendar already has an event at that time, **When** they add another, **Then** it is created anyway (nothing reads the calendar for the AI, so nothing checks for clashes), and the run shows exactly what was created.
+6. **Given** Google access is missing or expired, **When** suggestions are made, **Then** no Drive or Gmail action is suggested; a direct request fails with a plain "connect Google" message.
+7. **Given** a person who is not the deployment's owner, **When** suggestions are made or they request a Drive or Gmail action directly, **Then** no such action is suggested, the request is refused with a plain "not available" message, and nothing of the owner's mail or files is read, created, sent, or shown.
 
 ---
 
 ### User Story 8 - Nothing crosses a boundary, and secrets stay secret (Priority: P1)
 
-A person's workspaces are theirs alone, and private accounts stay private. An action uses only the workspace it was clicked on, only the connections that person is allowed to use (the owner's Gmail, Drive, and Calendar are never available to anyone else), and never shows a secret. Text from web pages, mail, calendar entries, issues, and messages that comes back through a tool is treated as untrusted content, not as instructions.
+A person's workspaces are theirs alone, and private accounts stay private. An action uses only the workspace it was clicked on, only the connections that person is allowed to use (the owner's Gmail and Drive are never available to anyone else), and never shows a secret. Text from web pages, mail, issues, and messages that comes back through a tool is treated as untrusted content, not as instructions.
 
 **Why this priority**: These tools can write to real accounts and read private mail. A leak or a hijacked action would be far worse than a wrong summary.
 
@@ -209,8 +190,7 @@ A person's workspaces are theirs alone, and private accounts stay private. An ac
 
 - No integration is connected at all: the card still shows local suggestions; the 010 agents are unaffected.
 - The person presses refresh while a suggestion request is running, or opens and closes cards quickly: no second request is started for the same card while one is running, so a burst of opens cannot become a burst of AI requests.
-- A person who is not the deployment's owner sees or reuses a Drive, Gmail, or Calendar button (for example a stale one, or after ownership changes): it is refused with a plain message and does nothing; the owner's account is never reachable through them.
-- An event's start is in the past: it is created as asked; the button shows the day and time before the click, so the person can see what they are creating.
+- A person who is not the deployment's owner sees or reuses a Drive or Gmail button (for example a stale one, or after ownership changes): it is refused with a plain message and does nothing; the owner's account is never reachable through them.
 - The suggestion pass returns fewer than three usable actions (or more than six): the card shows what is usable, up to six, never padding with tools that cannot run.
 - A suggestion names a tool that does not exist or whose credentials vanished before the click: the click fails with a plain message and nothing runs.
 - The prefilled details are wrong or empty (a title, a recipient): the person can see what will be used before anything external happens, and an empty required detail stops the action with a plain message rather than creating a blank item.
@@ -271,24 +251,20 @@ A person's workspaces are theirs alone, and private accounts stay private. An ac
 
 **Integration tools**
 
-- **FR-031**: The system MUST provide these integration tools, each through a connection to that service: GitHub (create issue, create gist, search code or issues, comment on an issue); Jira (create issue, search, add comment); Notion (create page, append content, search); Slack (post message, upload snippet); Google Drive (upload Markdown, create document from summary, get share link); Gmail (create draft, send message, search messages); Google Calendar (create event, list events).
-- **FR-032**: Each integration MUST use credentials supplied to the deployment (or, later, per person). GitHub, Jira, Notion, and Slack use one shared account each for everyone on the deployment. Drive, Gmail, and Calendar use the account of one owner designated in the deployment's configuration and MUST be usable by that owner only; for every other person they MUST NOT be suggested and any direct request MUST be refused. A missing or rejected credential MUST fail clearly ("connect this service") and MUST NOT crash or affect other tools.
-- **FR-033**: Writes MUST go only to the destination configured for that integration (a repository, a parent page, a channel, a project, a folder, the owner's own mailbox, the owner's own calendar); an action MUST NOT choose a different destination on its own.
+- **FR-031**: The system MUST provide these integration tools, each through a connection to that service: GitHub (create issue, create gist, search code or issues, comment on an issue); Jira (create issue, search, add comment); Notion (create page, append content, search); Slack (post message, upload snippet); Google Drive (upload Markdown, create document from summary, get share link); Gmail (create draft, send message, search messages).
+- **FR-032**: Each integration MUST use credentials supplied to the deployment (or, later, per person). GitHub, Jira, Notion, and Slack use one shared account each for everyone on the deployment. Gmail and Drive use the account of one owner designated in the deployment's configuration and MUST be usable by that owner only; for every other person they MUST NOT be suggested and any direct request MUST be refused. A missing or rejected credential MUST fail clearly ("connect this service") and MUST NOT crash or affect other tools.
+- **FR-033**: Writes MUST go only to the destination configured for that integration (a repository, a parent page, a channel, a project, a folder, the owner's own mailbox); an action MUST NOT choose a different destination on its own.
 - **FR-034**: Search tools MUST NOT change anything in the service.
 - **FR-035**: Sending an email MUST require a confirmation step showing the exact recipient, subject, and body; only that confirmed message MAY be sent, once. Creating a draft MUST NOT send anything.
 - **FR-036**: Searching mail MUST be started only by the owner's own click, MUST return only sender, subject, date, and a short excerpt for a small number of messages, and MUST show them to the owner only. Mail content (senders, subjects, dates, excerpts, or anything else from a message) MUST NEVER be sent to the AI service, MUST NOT be usable by any other tool during a run, and MUST NOT be saved into the workspace unless the owner saves it.
 - **FR-037**: Getting a share link MUST NOT change who can access an item beyond what the person's configured sharing already allows.
-- **FR-049** *(added 2026-09-20)*: Creating a calendar event MUST create exactly one event, on the owner's own calendar only, for the owner alone: it MUST NOT add guests, send invitations, or notify anyone. It MUST NOT edit or delete any existing event.
-- **FR-050** *(added 2026-09-20)*: The title, day, and start and end times of an event to be created MUST be shown on its button before the click, and the click MUST create exactly what was shown. A missing title, a day or time that is not real, or an end before the start MUST stop the action with a plain message before anything is created; the system MUST NOT create a blank event or guess a time. A day with no time, or a start with no end, takes the defaults in Assumptions.
-- **FR-051** *(added 2026-09-20)*: Looking at the calendar MUST be started only by the owner's own click, MUST return only the title, day, and start and end times for a small number of events, and MUST show them to the owner only. Calendar content (titles, times, guests, locations, descriptions, or anything else from an event) MUST NEVER be sent to the AI service, MUST NOT be usable by any other tool during a run, and MUST NOT be saved into the workspace unless the owner saves it. It MUST NOT change anything on the calendar.
-- **FR-052** *(added 2026-09-20)*: A calendar tool MUST be available only when the owner's Google authorization covers Calendar. When it does not, Calendar is treated as not connected (not suggested; a direct request fails with the plain "connect Google" message) and MUST NOT affect Drive or Gmail.
 
 **Safety and privacy**
 
-- **FR-038**: Every action MUST use only the workspace it was clicked on and only the connections that person is allowed to use (the shared team-tool connections and, for the owner only, Drive, Gmail, and Calendar); another person's or workspace's content, and the owner's mail, files, and calendar, MUST NEVER be read, sent, saved, or shown to anyone else.
+- **FR-038**: Every action MUST use only the workspace it was clicked on and only the connections that person is allowed to use (the shared team-tool connections and, for the owner only, Gmail and Drive); another person's or workspace's content, and the owner's mail and files, MUST NEVER be read, sent, saved, or shown to anyone else.
 - **FR-039**: Actions MUST be refused for the Other bucket (tabs with no workspace).
-- **FR-040**: Text that comes from pages, issues, messages, mail, calendar entries, or documents through any tool MUST be treated as untrusted content and MUST NOT be followed as instructions.
-- **FR-041**: Secrets (tokens, keys, passwords) MUST NOT appear in the interface, in logs, in errors, or in saved runs; tab, page, mail, calendar, and message content MUST NOT appear in logs or error messages.
+- **FR-040**: Text that comes from pages, issues, messages, mail, or documents through any tool MUST be treated as untrusted content and MUST NOT be followed as instructions.
+- **FR-041**: Secrets (tokens, keys, passwords) MUST NOT appear in the interface, in logs, in errors, or in saved runs; tab, page, mail, and message content MUST NOT appear in logs or error messages.
 - **FR-042**: The system MUST NOT provide computer-use or mouse-control actions, tools that run without a click, or a way for the person to add their own tool servers.
 - **FR-043**: The original 010 agents MUST keep working with no tool and no integration configured.
 
@@ -306,9 +282,8 @@ A person's workspaces are theirs alone, and private accounts stay private. An ac
 ### Key Entities
 
 - **Tool**: One thing the system can do (for example, "create an issue"). Has an identifier, a description, the inputs it needs, and whether it is local or reaches a service. Not stored per person.
-- **Integration**: An outside service (GitHub, Jira, Notion, Slack, Google Drive, Gmail, Google Calendar) with its connection state (connected, missing, rejected), its configured destination, and who may use it (everyone on the deployment for the team tools; the owner only for Drive, Gmail, and Calendar).
-- **Owner**: The one person the deployment designates as the holder of the Google account behind Drive, Gmail, and Calendar. Not a role anyone can claim from the interface.
-- **Calendar event**: One event placed on the owner's own calendar by a click: a title, a day, start and end times (or all day), and no guests. The product never edits or deletes it afterwards.
+- **Integration**: An outside service (GitHub, Jira, Notion, Slack, Google Drive, Gmail) with its connection state (connected, missing, rejected), its configured destination, and who may use it (everyone on the deployment for the team tools; the owner only for Gmail and Drive).
+- **Owner**: The one person the deployment designates as the holder of the Google account behind Gmail and Drive. Not a role anyone can claim from the interface.
 - **Suggestion**: A ranked, short-lived proposal for this workspace: a label, the tool to run, optional prefilled inputs, and a reason. Not a run.
 - **Action run**: One click's saved outcome for a workspace (the same run record as the 010 agent runs): state, time, what it did, its result, and any external link or identifier, or its plain failure.
 - **Browser intent**: A request to the extension to open tabs or offer a download, with the extension's reported outcome.
@@ -331,24 +306,21 @@ A person's workspaces are theirs alone, and private accounts stay private. An ac
 - **SC-009**: No email is sent without the person confirming the exact recipient, subject, and body, in 100% of checked cases; creating a draft never sends.
 - **SC-010**: Across two people and two workspaces with distinctive content, 0 actions, suggestions, or results contain the other's content.
 - **SC-011**: Content returned by tools that contains instructions is followed in 0 of the checked hijack attempts (at least five styles), judged by whether the action did anything the click did not ask for.
-- **SC-012**: A scan of every log and error message produced by a full run of every path finds 0 tokens, keys, page text, mail content, calendar content, or message content.
+- **SC-012**: A scan of every log and error message produced by a full run of every path finds 0 tokens, keys, page text, mail content, or message content.
 - **SC-013**: The five 010 agents still pass all their checks with no tool configured, and with every tool configured.
-- **SC-014**: For every person other than the deployment's owner, in 100% of checked cases no Drive, Gmail, or Calendar action is suggested, run, or shows any of the owner's mail, files, or calendar.
+- **SC-014**: For every person other than the deployment's owner, in 100% of checked cases no Gmail or Drive action is suggested, run, or shows any of the owner's mail or files.
 - **SC-015**: In 100% of checked cases no mail content (sender, subject, date, or excerpt) appears in anything sent to the AI service, including drafts written from a message-search result.
 - **SC-016**: In 100% of checked cases opening or refreshing a card makes exactly 1 AI request for suggestions, that request runs no tool, and no other AI request is made without a click.
-- **SC-017** *(added 2026-09-20)*: In 100% of checked cases no calendar content (the title, time, guest, location, or description of an existing event) appears in anything sent to the AI service.
-- **SC-018** *(added 2026-09-20)*: In 100% of checked cases a calendar event is created only by a click, exactly once, for the owner alone with no guest invited and nobody notified, with exactly the title and times shown on its button, and the run shows its link or id; an invalid title or time creates nothing.
 
 ## Assumptions
 
 - This is a **stretch** feature. It depends on 010 (agent runs, the card, safe page reading), the shared AI layer, and tab persistence, and it does **not** gate the MVP cut line (the constitution allows MCP and multi-step agents as optional stretch that must not gate the demo). FEATURES.md asks that stretch work start after the cut line ships; this branch starts it early at the person's explicit request.
 - The AI provider does not change: the default provider stays default and the backup stays backup. This feature adds the tool layer only.
 - Home is the first surface; the sidebar reuses the same suggestions and runs later (as with 010).
-- "Connected" means credentials for that service are configured for the deployment, with one configured destination per service (a demo repository, a parent page, a channel, a project, a folder, the owner's mailbox, the owner's calendar). The team tools are shared by everyone on the deployment; Drive, Gmail, and Calendar belong to one designated owner and are available to that person only. Per-person credentials are expected later without changing what the person sees. No screen for entering credentials, and no screen for choosing the owner, is part of this feature: both are set in the deployment's configuration.
+- "Connected" means credentials for that service are configured for the deployment, with one configured destination per service (a demo repository, a parent page, a channel, a project, a folder, the owner's mailbox). The team tools are shared by everyone on the deployment; Gmail and Drive belong to one designated owner and are available to that person only. Per-person credentials are expected later without changing what the person sees. No screen for entering credentials, and no screen for choosing the owner, is part of this feature: both are set in the deployment's configuration.
 - Gmail is the sixth integration, added after the first draft, and is no longer out of scope. Its three tools are create draft, send message, and search messages; sending is guarded as described in FR-035.
-- Google Calendar is the seventh integration, added after the tool layer was built (amendment of 2026-09-20). Its two tools are create event and look at the calendar. Events go on the owner's own primary calendar in that calendar's time zone, with the calendar's usual reminders. A day with no time makes an all-day event; a start with no end lasts one hour. There are no guests, invitations, video-call links, or repeating events, and existing events are never edited or deleted. Looking at the calendar shows the next few events around a chosen day (a small fixed number, as for mail). Calendar access is part of the owner's Google authorization; if that authorization was given without it, Calendar is simply not connected (FR-052). No screen for granting it is part of this feature.
 - Automatic suggestions cost one AI request per card open or refresh and send the workspace's tab titles, summary, and checklist to the AI service each time; the person accepted this in place of a press-only rule for this one request. Planning may add a small minimum gap between automatic requests. "About three to six" suggestions is a fixed small range; the step limit per click, the time limit per run, the number of tabs or searches opened per click, and the number of runs allowed at once per person are all fixed small numbers chosen at planning.
 - A PDF export is a simple text document, not a designed layout.
 - Tab opening and file downloads happen in the person's own browser through the existing extension, using only what the person clicked; no new permissions beyond opening tabs and offering a download are assumed.
-- Content that a tool returns (pages, issues, chat messages) is shown to the person and may be given to the AI only inside the bounded run of that click; it is not stored on the workspace unless the person saves it. Mail and calendar content are the exception: they are shown to the owner only and are never given to the AI.
-- Out of scope: showing the full catalog as buttons; computer-use or mouse agents; person-installed tool servers; Pinterest, Spotify, Figma, and Miro; reading or sending mail, or reading the calendar, without an explicit click; deleting or editing existing items in outside services (except adding a comment where listed), including calendar events; inviting guests to an event or making repeating events; unbounded autonomous agents; making tools required for the five one-shot agents; a global command bar shortcut into these tools (011 may add it later).
+- Content that a tool returns (pages, issues, chat messages) is shown to the person and may be given to the AI only inside the bounded run of that click; it is not stored on the workspace unless the person saves it. Mail is the exception: it is shown to the owner only and is never given to the AI.
+- Out of scope: showing the full catalog as buttons; computer-use or mouse agents; person-installed tool servers; Pinterest, Spotify, Figma, and Miro; reading or sending mail without an explicit click; deleting or editing existing items in outside services (except adding a comment where listed); unbounded autonomous agents; making tools required for the five one-shot agents; a global command bar shortcut into these tools (011 may add it later).

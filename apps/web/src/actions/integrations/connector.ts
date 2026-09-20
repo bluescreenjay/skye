@@ -27,6 +27,8 @@ export interface ConnectorResult {
   links: { label: string; url: string | null; id: string | null }[];
   items?: SearchItem[];
   mail?: { from: string; subject: string; date: string; excerpt: string }[];
+  /** Calendar look-up rows. Private: shown to the owner once and never stored or given to the AI. */
+  events?: { title: string; start: string; end: string; allDay: boolean }[];
 }
 
 export interface ToolConnector {

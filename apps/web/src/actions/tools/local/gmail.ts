@@ -1,4 +1,5 @@
 import { CONFIRM_WINDOW_MS, MAIL_EXCERPT_CHARS, MAIL_RESULTS_MAX } from "../../limits";
+import { bindingFor } from "../../integrations/bindings";
 import { getConnector } from "../../integrations/connector";
 import type { ToolExecuteContext, ToolExecuteResult } from "../../registry";
 
@@ -19,7 +20,8 @@ export async function executeSendPreview(ctx: ToolExecuteContext): Promise<ToolE
 }
 
 export async function executeMailSearch(ctx: ToolExecuteContext): Promise<ToolExecuteResult & { mail?: { from: string; subject: string; date: string; excerpt: string }[] }> {
-  const result = await getConnector().call("gmail_search_messages", { text: ctx.args.text }, ctx.signal);
+  const mapped = bindingFor("gmail_search_messages")!.toArguments({ text: ctx.args.text }, "");
+  const result = await getConnector().call("gmail_search_messages", mapped, ctx.signal);
   const mail = (result.mail ?? []).slice(0, MAIL_RESULTS_MAX).map((item) => ({
     from: item.from,
     subject: item.subject,

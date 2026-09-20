@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { TabRef, Workspace } from "@ai-browser/shared";
-import { composeDirectory, dropTabByChromeTabId, dropTabById } from "../src/home/compose";
+import {
+  composeDirectory,
+  dropTabByChromeTabId,
+  dropTabById,
+  dropWorkspaceCard,
+  emptiedWorkspaceIds,
+} from "../src/home/compose";
 
 function workspace(partial: Partial<Workspace> & Pick<Workspace, "id" | "name">): Workspace {
   return {
@@ -53,19 +59,22 @@ describe("composeDirectory", () => {
     expect(directory.other).toEqual([]);
   });
 
-  it("still lists a named workspace with zero tabs", () => {
+  it("omits a named workspace with zero live tabs", () => {
     const directory = composeDirectory([workspace({ id: "empty", name: "saved pile" })], []);
-    expect(directory.cards).toHaveLength(1);
-    expect(directory.cards[0]?.tabs).toEqual([]);
+    expect(directory.cards).toEqual([]);
     expect(directory.other).toEqual([]);
   });
 
   it("omits archived workspaces", () => {
     const directory = composeDirectory(
       [workspace({ id: "gone", name: "old", status: "archived" }), workspace({ id: "live", name: "now" })],
-      [tab({ id: "t1", title: "x", workspaceId: "gone", chromeTabId: 3 })],
+      [
+        tab({ id: "t1", title: "x", workspaceId: "gone", chromeTabId: 3 }),
+        tab({ id: "t2", title: "y", workspaceId: "live", chromeTabId: 4 }),
+      ],
     );
     expect(directory.cards.map((card) => card.workspace.id)).toEqual(["live"]);
+    expect(directory.cards[0]?.tabs.map((item) => item.id)).toEqual(["t2"]);
   });
 
   it("never injects dummy seed names like refs — furniture", () => {
@@ -90,7 +99,36 @@ describe("dropTab helpers", () => {
         tab({ id: "t2", title: "loose", workspaceId: null, chromeTabId: 12 }),
       ],
     );
-    expect(dropTabById(start, "t1").cards[0]?.tabs).toEqual([]);
+    expect(dropTabById(start, "t1").cards).toEqual([]);
     expect(dropTabByChromeTabId(start, 12).other).toEqual([]);
+  });
+
+  it("removes the card when the last live tab is dropped", () => {
+    const start = composeDirectory(
+      [workspace({ id: "w1", name: "hackathon" }), workspace({ id: "w2", name: "other" })],
+      [
+        tab({ id: "t1", title: "docs", workspaceId: "w1", chromeTabId: 11 }),
+        tab({ id: "t2", title: "keep", workspaceId: "w2", chromeTabId: 12 }),
+      ],
+    );
+    const after = dropTabById(start, "t1");
+    expect(after.cards.map((c) => c.workspace.id)).toEqual(["w2"]);
+    expect(emptiedWorkspaceIds(start, after)).toEqual(["w1"]);
+  });
+});
+
+describe("dropWorkspaceCard", () => {
+  it("removes the card and moves its live tabs to Other", () => {
+    const start = composeDirectory(
+      [workspace({ id: "w1", name: "hackathon" })],
+      [
+        tab({ id: "t1", title: "docs", workspaceId: "w1", chromeTabId: 11 }),
+        tab({ id: "t2", title: "loose", workspaceId: null, chromeTabId: 12 }),
+      ],
+    );
+    const next = dropWorkspaceCard(start, "w1");
+    expect(next.cards).toEqual([]);
+    expect(next.other.map((t) => t.id).sort()).toEqual(["t1", "t2"]);
+    expect(next.other.find((t) => t.id === "t1")?.workspaceId).toBeNull();
   });
 });

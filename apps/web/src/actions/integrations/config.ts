@@ -3,6 +3,9 @@
 import type { IntegrationId } from "@ai-browser/shared";
 import { BINDING_CACHE_MS, REJECTED_TTL_MS } from "../limits";
 
+/** Google's hosted Calendar MCP server (Developer Preview). */
+export const GOOGLE_CALENDAR_MCP_URL = "https://calendarmcp.googleapis.com/mcp/v1";
+
 export type ConnectionStatus = "connected" | "missing" | "rejected";
 
 export type Transport =
@@ -112,6 +115,14 @@ export function integrationConfig(id: IntegrationId): IntegrationConfig {
         credentialPresent: googleCredentialPresent(),
         destination: "mailbox",
       };
+    case "calendar":
+      return {
+        id,
+        // Google's own Calendar MCP endpoint unless the operator points it elsewhere (a URL, or a command for a stdio server).
+        transport: env("MCP_GOOGLE_CALENDAR_URL") || env("MCP_GOOGLE_CALENDAR_COMMAND") ? transportOf("GOOGLE_CALENDAR") : { kind: "http", url: GOOGLE_CALENDAR_MCP_URL },
+        credentialPresent: googleCredentialPresent(),
+        destination: "primary calendar",
+      };
   }
 }
 
@@ -138,7 +149,7 @@ export function isOwner(userId: string): boolean {
 }
 
 export function serviceLabel(id: IntegrationId): string {
-  if (id === "drive" || id === "gmail") return "Google";
+  if (id === "drive" || id === "gmail" || id === "calendar") return "Google";
   if (id === "github") return "GitHub";
   if (id === "jira") return "Jira";
   if (id === "notion") return "Notion";
@@ -146,6 +157,6 @@ export function serviceLabel(id: IntegrationId): string {
 }
 
 export const TEAM_INTEGRATIONS: IntegrationId[] = ["github", "jira", "notion", "slack"];
-export const GOOGLE_INTEGRATIONS: IntegrationId[] = ["drive", "gmail"];
+export const GOOGLE_INTEGRATIONS: IntegrationId[] = ["drive", "gmail", "calendar"];
 
 export const BINDING_CACHE_TTL = BINDING_CACHE_MS;

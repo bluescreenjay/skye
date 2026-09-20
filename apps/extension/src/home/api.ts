@@ -1,6 +1,7 @@
 import type { TabRef, Workspace } from "@ai-browser/shared";
 import { loadConfig } from "../config";
 import {
+  archiveWorkspace as archiveWorkspaceWrite,
   createWorkspace as createWorkspaceWrite,
   moveTab as moveTabWrite,
   renameWorkspace as renameWorkspaceWrite,
@@ -52,6 +53,11 @@ export async function loadDirectory(): Promise<{ workspaces: Workspace[]; tabRef
 
 export async function renameWorkspace(id: string, name: string): Promise<Workspace | null> {
   const result = await renameWorkspaceWrite(id, name);
+  return result.ok ? result.value : null;
+}
+
+export async function archiveWorkspace(id: string): Promise<Workspace | null> {
+  const result = await archiveWorkspaceWrite(id);
   return result.ok ? result.value : null;
 }
 

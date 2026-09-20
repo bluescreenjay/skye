@@ -161,9 +161,9 @@ Workspace cards can suggest and run a fixed catalog of 30 tools. MCP connections
 | `POST /api/workspaces/:id/actions/runs/:runId/cancel` | Cancel a prepared email |
 | `GET /api/workspaces/:id/summary/export?format=md\|pdf` | Saved summary as a file |
 
-Connection variables are listed in the repo-root `.env.example` (`MCP_*`, `GITHUB_REPO`, `JIRA_*`, `NOTION_*`, `SLACK_*`, `DRIVE_*`, `GOOGLE_*`, `INTEGRATION_OWNER_USER_ID`). Stdio servers are spawned with a **minimal env** (that integration's credential plus `PATH`), never the whole process environment.
+Connection variables are listed in the repo-root `.env.example` (`MCP_*`, `GITHUB_REPO`, `JIRA_*`, `NOTION_*`, `SLACK_*`, `DRIVE_*`, `GOOGLE_*`, `INTEGRATION_OWNER_USER_ID`). Google Drive, Gmail, and Calendar are the owner's only. Calendar uses Google's hosted server by default and needs a refresh token granted the Calendar scope. Stdio servers are spawned with a **minimal env** (that integration's credential plus `PATH`), never the whole process environment.
 
-`ACTIONS_LIVE=1` runs one suggestion pass and one composed local run against the real provider on fixture tabs. `ACTIONS_LIVE_GITHUB=1` (and `JIRA`, `NOTION`, `SLACK`, `GOOGLE`) connects and calls `tools/list` only — it never writes and never reads mail.
+`ACTIONS_LIVE=1` runs one suggestion pass and one composed local run against the real provider on fixture tabs. `ACTIONS_LIVE_GITHUB=1` (and `JIRA`, `NOTION`, `SLACK`, `GOOGLE`, which covers Drive, Gmail, and Calendar) connects and calls `tools/list` only — it never writes and never reads mail.
 
 A scratch-copy `next build --webpack` (a temp tree, never the running `apps/web/.next`) compiled with `serverExternalPackages: ["@modelcontextprotocol/sdk"]`. The seven action routes registered as dynamic. Leave that package external; the SDK is not bundled.
 

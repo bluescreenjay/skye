@@ -38,6 +38,7 @@ export async function POST(request: Request, context: Context) {
     const parsed = parseRunBody(body);
     const started = await startToolRun(user!.id, workspace, toolId, parsed);
     if (toolId === "gmail_search_messages") return json({ run: started.run, mail: { messages: started.mail ?? [] } }, 200);
+    if (toolId === "calendar_list_events") return json({ run: started.run, calendar: { events: started.calendar ?? [] } }, 200);
     return json({ run: started.run }, 202);
   } catch (caught) {
     if (caught instanceof ActionRequestError) return json({ error: caught.message, code: caught.code }, caught.status);

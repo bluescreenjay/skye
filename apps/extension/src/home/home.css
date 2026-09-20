@@ -464,6 +464,32 @@ input:focus,
   font-size: 20px;
 }
 
+.card-archive {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  margin-left: 4px;
+  margin-right: 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 300;
+  line-height: 1;
+  opacity: 0.28;
+  cursor: pointer;
+}
+
+.card-head:hover .card-archive {
+  opacity: 0.55;
+}
+
+.card-archive:hover {
+  opacity: 0.9;
+  background: var(--accent-10, var(--accent-06));
+}
+
 .card-head .app-icon {
   width: 44px;
   height: 44px;

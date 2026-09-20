@@ -1,7 +1,5 @@
 // One click starts one saved run (contracts/http.md POST …/run). Checks happen before anything
 // is stored. The job finishes the row; this function returns the pending view at once.
-import { checkTargets } from "./tools/integration";
-import type { CalendarEventRow } from "./tools/calendar";
 import type { ToolRunView } from "@ai-browser/shared";
 import { AgentRequestError } from "../agents/errors";
 import { startJob } from "../agents/jobs";
@@ -63,15 +61,12 @@ function remapInsertError(error: unknown): never {
   throw error;
 }
 
-/** Tools whose result is the owner's private content: run inside the click, shown once, never stored. */
-const INLINE_PRIVATE = new Set(["gmail_search_messages", "calendar_list_events"]);
-
 export async function startToolRun(
   userId: string,
   workspace: Pick<DbWorkspace, "id" | "name">,
   toolId: string,
   body: { args: Record<string, unknown>; label: string | null },
-): Promise<{ run: ToolRunView; mail?: { from: string; subject: string; date: string; excerpt: string }[]; calendar?: CalendarEventRow[] }> {
+): Promise<{ run: ToolRunView; mail?: { from: string; subject: string; date: string; excerpt: string }[] }> {
   const tool = getTool(toolId);
   if (!tool) throw unknownTool();
 
@@ -95,8 +90,6 @@ export async function startToolRun(
     }
   }
 
-  await checkTargets(tool.id, userId, workspace.id, args); // a destination this workspace may not use is refused before anything is stored
-
   const composed = isComposedRun(tool, args);
   if (needsModel(tool, args)) getActionModel();
 
@@ -115,8 +108,7 @@ export async function startToolRun(
     remapInsertError(error);
   }
   const pending = await readToolRun(userId, workspace.id, inserted.id);
-  if (INLINE_PRIVATE.has(tool.id)) {
-    // The owner's mail and calendar: computed inside this request, shown once, never stored, never given to the AI.
+  if (tool.id === "gmail_search_messages") {
     try {
       const executed = await tool.execute({
         userId,
@@ -125,18 +117,16 @@ export async function startToolRun(
         args,
         signal: AbortSignal.timeout(15_000),
       });
-      const kind = executed.result.kind;
-      const shown = kind === "mail_search" || kind === "calendar_events" ? executed.result.shown : 0;
       await finishRunSucceeded(
         { query },
         inserted.id,
         userId,
-        { result: kind === "calendar_events" ? { kind: "calendar_events", shown } : { kind: "mail_search", shown }, links: [], steps: [], refused: [], stoppedAtLimit: false },
+        { result: { kind: "mail_search", shown: executed.result.kind === "mail_search" ? executed.result.shown : 0 }, links: [], steps: [], refused: [], stoppedAtLimit: false },
       );
       await applyRetention({ query }, userId, workspace.id, tool.id).catch(() => undefined);
       const run = (await readToolRun(userId, workspace.id, inserted.id)) ?? pending!;
-      const priv = executed as { mail?: { from: string; subject: string; date: string; excerpt: string }[]; calendar?: CalendarEventRow[] };
-      return { run, mail: priv.mail ?? [], calendar: priv.calendar ?? [] };
+      const mail = (executed as { mail?: { from: string; subject: string; date: string; excerpt: string }[] }).mail ?? [];
+      return { run, mail };
     } catch (error) {
       await failRun(inserted.id, userId, failureFor(error));
       return { run: (await readToolRun(userId, workspace.id, inserted.id)) ?? pending! };

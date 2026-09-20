@@ -12,6 +12,7 @@ import { executeSaveRefs } from "./tools/local/save-refs";
 import { executeCopyText, executeComposeShare } from "./tools/local/copy-text";
 import { executeSendPreview, executeMailSearch } from "./tools/local/gmail";
 import { integrationExecute } from "./tools/integration";
+import { executeCalendarList } from "./tools/calendar";
 import {
   BODY_CHARS,
   COPY_TEXT_CHARS,
@@ -30,6 +31,8 @@ import {
   SEARCHES_OPENED_MAX,
   TABS_OPENED_MAX,
   TITLE_CHARS,
+  EVENT_LOCATION_CHARS,
+  EVENT_NOTES_CHARS,
 } from "./limits";
 
 export type ToolEffectClass = "read" | "write" | "send";
@@ -557,6 +560,42 @@ const TOOLS: ToolDef[] = [
       properties: { text: str(QUERY_MIN, TITLE_CHARS) },
     },
     execute: executeMailSearch,
+  }),
+  ext("calendar", {
+    id: "calendar_create_event",
+    label: "Add to my calendar",
+    description:
+      "Put ONE event on the owner's own calendar, for them alone (no guests, no invitations). Needs a title and a start: a day (2026-10-03, an all-day event) or a day and time (2026-10-03T09:30). The end is optional and defaults to one hour later.",
+    effect: "write",
+    ownerOnly: true,
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["title", "start"],
+      properties: {
+        title: str(1, TITLE_CHARS),
+        start: str(10, 40),
+        end: str(10, 40),
+        location: str(0, EVENT_LOCATION_CHARS),
+        notes: str(0, EVENT_NOTES_CHARS),
+      },
+    },
+    argFlags: { title: { visible: true }, start: { visible: true } },
+  }),
+  ext("calendar", {
+    id: "calendar_list_events",
+    label: "What's on my calendar",
+    description:
+      "Show the owner the next few events on their own calendar, for a week from a chosen day (2026-10-03; today when omitted). Shown once and never saved or read by the AI.",
+    effect: "read",
+    ownerOnly: true,
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: [],
+      properties: { day: str(10, 10) },
+    },
+    execute: executeCalendarList,
   }),
 ];
 

@@ -5,6 +5,8 @@ import {
   composeDirectory,
   dropTabByChromeTabId,
   dropTabById,
+  dropWorkspaceCard,
+  emptiedWorkspaceIds,
   moveTabRef,
 } from "../src/home/compose";
 import { closeHomeTab } from "../src/home/navigation";
@@ -37,7 +39,7 @@ function tab(partial: Partial<TabRef> & Pick<TabRef, "id" | "title" | "workspace
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Home close — live filter pipeline", () => {
-  it("hides closed members while keeping empty workspace cards", () => {
+  it("hides closed members and omits empty workspace cards", () => {
     const directory = composeDirectory(
       [workspace({ id: "w1", name: "resumes" }), workspace({ id: "w2", name: "quiet" })],
       [
@@ -48,9 +50,8 @@ describe("Home close — live filter pipeline", () => {
       ],
     );
 
-    expect(directory.cards.map((c) => c.workspace.id)).toEqual(["w1", "w2"]);
+    expect(directory.cards.map((c) => c.workspace.id)).toEqual(["w1"]);
     expect(directory.cards[0]?.tabs.map((t) => t.id)).toEqual(["a"]);
-    expect(directory.cards[1]?.tabs).toEqual([]);
     expect(directory.other.map((t) => t.id)).toEqual(["c"]);
   });
 
@@ -64,8 +65,9 @@ describe("Home close — live filter pipeline", () => {
     );
 
     const afterX = dropTabById(start, "a");
-    expect(afterX.cards[0]?.tabs).toEqual([]);
+    expect(afterX.cards).toEqual([]);
     expect(afterX.other.map((t) => t.id)).toEqual(["b"]);
+    expect(emptiedWorkspaceIds(start, afterX)).toEqual(["w1"]);
 
     const afterRemoved = dropTabByChromeTabId(afterX, 10);
     expect(afterRemoved).toEqual(afterX);
@@ -94,7 +96,7 @@ describe("Home close — live filter pipeline", () => {
       [tab({ id: "a", title: "doc", workspaceId: "w1", chromeTabId: 10 })],
     );
     const hidden = dropTabById(start, "a");
-    expect(hidden.cards[0]?.tabs).toEqual([]);
+    expect(hidden.cards).toEqual([]);
 
     // Simulate organize/refresh before ingest cleared the binding.
     const refreshed = composeDirectory(
@@ -104,13 +106,12 @@ describe("Home close — live filter pipeline", () => {
     expect(refreshed.cards[0]?.tabs.map((t) => t.id)).toEqual(["a"]);
   });
 
-  it("refresh after ingest cleared chromeTabId keeps the row hidden", () => {
+  it("refresh after ingest cleared chromeTabId omits the empty card", () => {
     const refreshed = composeDirectory(
       [workspace({ id: "w1", name: "resumes" })],
       [tab({ id: "a", title: "doc", workspaceId: "w1", chromeTabId: null })],
     );
-    expect(refreshed.cards[0]?.tabs).toEqual([]);
-    expect(refreshed.cards).toHaveLength(1);
+    expect(refreshed.cards).toEqual([]);
   });
 
   it("moveTabRef only reshuffles currently visible live tabs", () => {
@@ -119,13 +120,32 @@ describe("Home close — live filter pipeline", () => {
       [
         tab({ id: "live", title: "open", workspaceId: "w1", chromeTabId: 1 }),
         tab({ id: "closed", title: "saved", workspaceId: "w1", chromeTabId: null }),
+        tab({ id: "keep", title: "other open", workspaceId: "w2", chromeTabId: 2 }),
       ],
     );
-    expect(start.cards[0]?.tabs.map((t) => t.id)).toEqual(["live"]);
+    expect(start.cards.find((c) => c.workspace.id === "w1")?.tabs.map((t) => t.id)).toEqual(["live"]);
+    expect(start.cards.find((c) => c.workspace.id === "w2")?.tabs.map((t) => t.id)).toEqual(["keep"]);
 
     const moved = moveTabRef(start, "live", "w2");
-    expect(moved.cards.find((c) => c.workspace.id === "w1")?.tabs).toEqual([]);
-    expect(moved.cards.find((c) => c.workspace.id === "w2")?.tabs.map((t) => t.id)).toEqual(["live"]);
+    expect(moved.cards.find((c) => c.workspace.id === "w1")).toBeUndefined();
+    expect(moved.cards.find((c) => c.workspace.id === "w2")?.tabs.map((t) => t.id)).toEqual([
+      "live",
+      "keep",
+    ]);
+  });
+
+  it("dropWorkspaceCard moves live tabs to Other and removes the card", () => {
+    const start = composeDirectory(
+      [workspace({ id: "w1", name: "resumes" })],
+      [
+        tab({ id: "a", title: "doc", workspaceId: "w1", chromeTabId: 10 }),
+        tab({ id: "b", title: "loose", workspaceId: null, chromeTabId: 11 }),
+      ],
+    );
+    const next = dropWorkspaceCard(start, "w1");
+    expect(next.cards).toEqual([]);
+    expect(next.other.map((t) => t.id).sort()).toEqual(["a", "b"]);
+    expect(next.other.find((t) => t.id === "a")?.workspaceId).toBeNull();
   });
 });
 

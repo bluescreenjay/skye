@@ -34,7 +34,8 @@ Layout matches `specs/005-home-all-workspaces/mocks/home-design-prototype/` (Hom
 photo, rail, “skye”, url field, greeting, workspace cards. Other tabs are rail-top icons, never
 a named “other” card. There is no create-workspace control and no Chrome tab-group sync
 (those are stretch — see FEATURES). Drag a tab onto another workspace (or Other) to move it;
-renaming a card title updates the workspace name via the API.
+renaming a card title updates the workspace name via the API. Archive a workspace with the
+card × (live tabs move to Other); closing the last live tab archives it automatically.
 
 **Organize** (feature 005b) posts to `POST /api/cluster/runs` with the same device token, then
 reloads workspaces and tab-refs so new groups appear. Home never invents workspace names or runs

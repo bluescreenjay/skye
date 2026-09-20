@@ -4,7 +4,7 @@
 // `ActionRun` and `PlanItem` in domain.ts are unchanged. IDs are UUID strings; times are UTC ISO-8601 strings.
 // Tool ids are plain strings on the wire: the catalog is server-side and the client never enumerates it.
 
-export type IntegrationId = "github" | "jira" | "notion" | "slack" | "drive" | "gmail";
+export type IntegrationId = "github" | "jira" | "notion" | "slack" | "drive" | "gmail" | "calendar";
 
 /** A small badge on a suggested button. Never a list of anything else. */
 export type ActionEffect = "local" | "browser" | "external" | "email";
@@ -58,7 +58,8 @@ export type ToolResult =
   | { kind: "created"; service: IntegrationId; what: string }
   | { kind: "search"; service: IntegrationId; items: SearchItem[] }
   | { kind: "email_preview"; to: string | null; subject: string; body: string; expiresAt: string; state: EmailState }
-  | { kind: "mail_search"; shown: number };
+  | { kind: "mail_search"; shown: number }
+  | { kind: "calendar_events"; shown: number }; // the events themselves are never stored
 
 export type OpenSkipReason = "not_secure" | "private_address" | "not_a_web_page" | "over_limit" | "duplicate";
 export type EmailState = "unsent" | "sending" | "sent" | "cancelled" | "expired";
@@ -130,6 +131,12 @@ export interface RunStarted {
 export interface MailSearchDone {
   run: ToolRunView;
   mail: { messages: { from: string; subject: string; date: string; excerpt: string }[] };
+}
+
+/** The calendar look-up (200): the events exist only in this response. Never stored, never given to the AI. */
+export interface CalendarListDone {
+  run: ToolRunView;
+  calendar: { events: { title: string; start: string; end: string; allDay: boolean }[] };
 }
 
 /** POST …/intents/:intentId */

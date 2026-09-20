@@ -6,11 +6,13 @@ import { ActionsGroup } from "../ui/ActionsGroup";
 import { executeActionIntents } from "./action-intents";
 import { matchesAddress } from "../ui/agents";
 import { TabRow } from "../ui/TabRow";
-import { loadDirectory, moveTab, renameWorkspace, runCluster } from "./api";
+import { loadDirectory, archiveWorkspace, moveTab, renameWorkspace, runCluster } from "./api";
 import {
   composeDirectory,
   dropTabByChromeTabId,
   dropTabById,
+  dropWorkspaceCard,
+  emptiedWorkspaceIds,
   type HomeDirectory,
 } from "./compose";
 import { createCloseInFlight } from "./close-inflight";
@@ -62,7 +64,31 @@ export function Home() {
   const dragRaf = useRef<number | null>(null);
   const organizing = useRef(false);
   const closing = useRef(createCloseInFlight());
+  const archiving = useRef(new Set<string>());
   const riseTimer = useRef<number | null>(null);
+
+  const persistArchive = useCallback(async (workspaceId: string) => {
+    if (archiving.current.has(workspaceId)) return;
+    archiving.current.add(workspaceId);
+    try {
+      await archiveWorkspace(workspaceId);
+    } finally {
+      archiving.current.delete(workspaceId);
+    }
+  }, []);
+
+  const applyTabDrop = useCallback(
+    (transform: (current: HomeDirectory) => HomeDirectory) => {
+      setDirectory((current) => {
+        const next = transform(current);
+        for (const workspaceId of emptiedWorkspaceIds(current, next)) {
+          void persistArchive(workspaceId);
+        }
+        return next;
+      });
+    },
+    [persistArchive],
+  );
 
   const orderedCards = [...directory.cards].sort((left, right) => {
     const leftRecent = recentWorkspaceIds.indexOf(left.workspace.id);
@@ -85,7 +111,7 @@ export function Home() {
 
   useEffect(() => {
     const onRemoved = (chromeTabId: number) => {
-      setDirectory((current) => dropTabByChromeTabId(current, chromeTabId));
+      applyTabDrop((current) => dropTabByChromeTabId(current, chromeTabId));
       if (dragChromeId.current !== chromeTabId) return;
       if (dragRaf.current != null) {
         cancelAnimationFrame(dragRaf.current);
@@ -99,7 +125,7 @@ export function Home() {
     };
     chrome.tabs.onRemoved.addListener(onRemoved);
     return () => chrome.tabs.onRemoved.removeListener(onRemoved);
-  }, []);
+  }, [applyTabDrop]);
 
   useEffect(() => {
     void loadWeatherPhrase().then(setWeather);
@@ -237,11 +263,37 @@ export function Home() {
     event.stopPropagation();
     if (afterDragClick(event)) return;
     if (!closing.current.begin(tab.id)) return;
-    setDirectory((current) => dropTabById(current, tab.id));
+    applyTabDrop((current) => dropTabById(current, tab.id));
     if (dragId.current === tab.id) endDrag();
     void closeHomeTab(tab).finally(() => {
       closing.current.end(tab.id);
     });
+  };
+
+  const archiveCard = async (workspace: Workspace) => {
+    const previous = directory;
+    const card = directory.cards.find((item) => item.workspace.id === workspace.id);
+    if (!card) return;
+    setDirectory(dropWorkspaceCard(directory, workspace.id));
+    setExpandedId((current) => (current === workspace.id ? null : current));
+    setRecentWorkspaceIds((current) => current.filter((id) => id !== workspace.id));
+    setCorrectionNote("");
+    for (const tab of card.tabs) {
+      const moved = await moveTab(tab.id, null);
+      if (!moved) {
+        setDirectory(previous);
+        setCorrectionNote("could not archive that workspace");
+        return;
+      }
+    }
+    if (archiving.current.has(workspace.id)) return;
+    archiving.current.add(workspace.id);
+    const saved = await archiveWorkspace(workspace.id);
+    archiving.current.delete(workspace.id);
+    if (!saved) {
+      setDirectory(previous);
+      setCorrectionNote("could not archive that workspace");
+    }
   };
 
   const toggleWorkspace = (workspaceId: string) => {
@@ -253,7 +305,7 @@ export function Home() {
   };
 
   const toggleCard = (workspaceId: string) => (event: MouseEvent) => {
-    if ((event.target as HTMLElement).closest(".ws-name, .app-icon")) return;
+    if ((event.target as HTMLElement).closest(".ws-name, .app-icon, .card-archive")) return;
     if (afterDragClick(event)) return;
     toggleWorkspace(workspaceId);
   };
@@ -370,6 +422,7 @@ export function Home() {
             onOpenTab={openTab}
             onCloseTab={closeTab}
             onRename={commitRename}
+            onArchive={(workspace) => void archiveCard(workspace)}
           />
         ))}
       </main>
@@ -398,6 +451,7 @@ function WorkspaceCardView({
   onOpenTab,
   onCloseTab,
   onRename,
+  onArchive,
 }: {
   card: HomeDirectory["cards"][number];
   expanded: boolean;
@@ -414,6 +468,7 @@ function WorkspaceCardView({
   onOpenTab: (tab: TabRef) => (event: MouseEvent) => void;
   onCloseTab: (tab: TabRef) => (event: MouseEvent) => void;
   onRename: (workspace: Workspace, next: string) => Promise<void>;
+  onArchive: (workspace: Workspace) => void;
 }) {
   const name = card.workspace.name.toLowerCase();
 
@@ -450,6 +505,17 @@ function WorkspaceCardView({
             </span>
           ))}
         </div>
+        <button
+          className="card-archive"
+          type="button"
+          aria-label="archive workspace"
+          onClick={(event) => {
+            event.stopPropagation();
+            onArchive(card.workspace);
+          }}
+        >
+          ×
+        </button>
       </div>
       {expanded ? (
         <div className="card-thirds">

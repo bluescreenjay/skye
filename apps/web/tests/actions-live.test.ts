@@ -9,7 +9,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { IntegrationId } from "@ai-browser/shared";
 import { getTool } from "@/src/actions/registry";
 import { probeIntegration } from "@/src/actions/integrations/mcp-client";
-import { connectionStatus } from "@/src/actions/integrations/config";
+import { connectionStatus, integrationConfig } from "@/src/actions/integrations/config";
+import { mcpConnector } from "@/src/actions/integrations/mcp-client";
+import { bindingFor } from "@/src/actions/integrations/bindings";
 import { activeProvider } from "@/src/llm";
 import { reset } from "./helpers";
 import { getActions, makeWorkspace, postRun, postSuggest, putTabsIn, restoreActionModel, runAndWait } from "./actions-helpers";
@@ -70,7 +72,7 @@ const PROBES: { flag: string; integrations: IntegrationId[] }[] = [
   { flag: "JIRA", integrations: ["jira"] },
   { flag: "NOTION", integrations: ["notion"] },
   { flag: "SLACK", integrations: ["slack"] },
-  { flag: "GOOGLE", integrations: ["drive", "gmail"] },
+  { flag: "GOOGLE", integrations: ["drive", "gmail", "calendar"] },
 ];
 
 for (const probe of PROBES) {
@@ -80,7 +82,9 @@ for (const probe of PROBES) {
       for (const integration of probe.integrations) {
         const status = connectionStatus(integration);
         if (status !== "connected") {
-          console.log(`[live] ${integration} status=${status}; not probing (missing transport, credential, or dest)`);
+          const cfg = integrationConfig(integration);
+          const lacking = [!cfg.transport && "transport (MCP_*_URL or MCP_*_COMMAND)", !cfg.credentialPresent && "credential", !cfg.destination && "destination"].filter(Boolean);
+          console.log(`[live] ${integration} status=${status}; not probing. Missing: ${lacking.join(", ") || "(none; it was rejected earlier)"}`);
           continue;
         }
         const result = await probeIntegration(integration);
@@ -98,7 +102,17 @@ for (const probe of PROBES) {
           console.log(`[live] ${integration} listed names: ${result.listed.slice(0, 40).join(", ")}`);
         }
         expect(result.listed).not.toContain("gmail_search_messages");
+
+        // One real READ through the app's own connector: proves the token is accepted and that the answer parses.
+        // Only tools that change nothing are ever called here.
+        const search = ["notion_search", "github_search", "jira_search"].find((id) => bindingFor(id)?.integration === integration && result.resolved.some((row) => row.toolId === id && row.bound));
+        if (search) {
+          const binding = bindingFor(search)!;
+          const answer = await mcpConnector().call(search, binding.toArguments({ text: integration === "notion" ? "" : "test", query: "test", kind: "issues" }, integrationConfig(integration).destination ?? ""), AbortSignal.timeout(20_000));
+          console.log(`[live] ${integration} read ${search}: items=${answer.items?.length ?? 0} links=${answer.links.length} first="${(answer.items?.[0]?.title ?? "").slice(0, 30)}"`);
+          expect(connectionStatus(integration)).toBe("connected");
+        }
       }
-    }, 30_000);
+    }, 60_000);
   });
 }

@@ -26,7 +26,7 @@ export const notConnected = (service: string) =>
   new ActionRequestError(
     409,
     "not_connected",
-    service.toLowerCase() === "google" || service.toLowerCase() === "drive" || service.toLowerCase() === "gmail"
+    ["google", "drive", "gmail", "calendar"].includes(service.toLowerCase())
       ? "Connect Google to use this action."
       : `Connect ${service} to use this action.`,
   );

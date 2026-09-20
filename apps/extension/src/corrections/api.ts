@@ -78,6 +78,26 @@ export async function renameWorkspace(id: string, name: string): Promise<WriteRe
   }
 }
 
+/** PATCH /api/workspaces/:id — archive (hide from Home; data kept). */
+export async function archiveWorkspace(id: string): Promise<WriteResult<Workspace>> {
+  const cfg = withConfig();
+  if (!cfg.ok) return cfg;
+
+  try {
+    const response = await fetch(`${cfg.config.apiBaseUrl}/api/workspaces/${id}`, {
+      method: "PATCH",
+      headers: authHeaders(cfg.config.deviceToken),
+      body: JSON.stringify({ status: "archived" }),
+    });
+    if (!response.ok) return { ok: false, reason: "failed" };
+    const json = await readJson<{ workspace?: Workspace }>(response);
+    if (!json?.workspace) return { ok: false, reason: "failed" };
+    return { ok: true, value: json.workspace };
+  } catch {
+    return { ok: false, reason: "failed" };
+  }
+}
+
 /** PATCH /api/tab-refs/:id — move to a workspace or Other (`null`). */
 export async function moveTab(id: string, workspaceId: string | null): Promise<WriteResult<TabRef>> {
   const cfg = withConfig();

@@ -4,8 +4,8 @@ import { generateJson, providerConfigured, unconfiguredMessage } from "../llm";
 import { ModelUnconfiguredError } from "../llm/errors";
 import { JOB_LIMIT_MS, STEP_MAX_TOKENS, SUGGEST_DEADLINE_MS, SUGGEST_MAX_TOKENS, TURN_DEADLINE_MS } from "./limits";
 
-/** Mail content. Prompt builders do not accept this type, so it cannot be interpolated by accident. */
-export type PrivateContent = { readonly __private: "mail"; readonly text: string };
+/** Mail or calendar content. Prompt builders do not accept this type, so it cannot be interpolated by accident. */
+export type PrivateContent = { readonly __private: "mail" | "calendar"; readonly text: string };
 
 export function privateMail(text: string): PrivateContent {
   return { __private: "mail", text };

@@ -35,8 +35,10 @@ describe("action tool registry", () => {
       "gmail_create_draft",
       "gmail_send_message",
       "gmail_search_messages",
+      "calendar_create_event",
+      "calendar_list_events",
     ]);
-    expect(ids).toHaveLength(30);
+    expect(ids).toHaveLength(32);
     for (const tool of allTools()) {
       expect(tool.inputSchema.type).toBe("object");
       expect(tool.inputSchema.additionalProperties).toBe(false);
@@ -60,6 +62,7 @@ describe("action tool registry", () => {
       expect(tool?.effect).toBe("read");
     }
     expect(getTool("gmail_search_messages")?.helper).toBe(false);
+    expect(getTool("calendar_list_events")?.helper).toBe(false); // the owner's calendar is never something the AI can look up
     expect(allTools().filter((tool) => tool.helper).map((tool) => tool.id)).toEqual([...HELPER_IDS]);
   });
 
@@ -70,7 +73,7 @@ describe("action tool registry", () => {
     }
   });
 
-  it("flags Drive and Gmail as owner-only", () => {
+  it("flags Drive, Gmail, and Calendar as owner-only", () => {
     for (const id of [
       "drive_upload_markdown",
       "drive_create_doc_from_summary",
@@ -78,6 +81,8 @@ describe("action tool registry", () => {
       "gmail_create_draft",
       "gmail_send_message",
       "gmail_search_messages",
+      "calendar_create_event",
+      "calendar_list_events",
     ]) {
       expect(getTool(id)?.ownerOnly).toBe(true);
     }
@@ -87,5 +92,7 @@ describe("action tool registry", () => {
   it("marks opened addresses and the send recipient as visible/prefill-only", () => {
     expect(getTool("open_related_tabs")?.argFlags.urls).toMatchObject({ visible: true, prefillOnly: true });
     expect(getTool("gmail_send_message")?.argFlags.to).toMatchObject({ visible: true, prefillOnly: true });
+    expect(getTool("calendar_create_event")?.argFlags.title).toMatchObject({ visible: true }); // what will be created is on the button first
+    expect(getTool("calendar_create_event")?.argFlags.start).toMatchObject({ visible: true });
   });
 });

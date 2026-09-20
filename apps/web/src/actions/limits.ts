@@ -22,6 +22,8 @@ export const MAX_TURNS = 4;
 export const MAX_HELPER_CALLS = 3;
 export const TURN_DEADLINE_MS = 20_000;
 export const TOOL_CALL_TIMEOUT_MS = 15_000;
+/** Starting an MCP server and listing its tools (a cold `npx` can take a few seconds). */
+export const CONNECT_TIMEOUT_MS = 20_000;
 export const JOB_LIMIT_MS = 60_000;
 export const STEP_MAX_TOKENS = 2_500;
 export const HELPER_RESULT_CHARS = 6_000;
@@ -70,3 +72,13 @@ export const BINDING_CACHE_MS = 5 * 60 * 1_000;
 export const TOKEN_EXPIRY_SKEW_MS = 60_000;
 export const MAIL_SEARCH_TIMEOUT_MS = 15_000;
 export const INTENT_STALE_MESSAGE = "The browser did not respond. You can try again.";
+
+// Google Calendar (owner only)
+export const CALENDAR_RESULTS_MAX = 5;
+export const CALENDAR_TITLE_CHARS = 120;
+/** A look-up covers this many days from the chosen day. */
+export const CALENDAR_WINDOW_DAYS = 7;
+/** A start with no end lasts this long. */
+export const EVENT_DEFAULT_MINUTES = 60;
+export const EVENT_NOTES_CHARS = 2_000;
+export const EVENT_LOCATION_CHARS = 200;

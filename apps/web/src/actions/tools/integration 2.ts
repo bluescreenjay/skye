@@ -5,7 +5,6 @@ import { bindingFor } from "../integrations/bindings";
 import { integrationConfig } from "../integrations/config";
 import { listSummary } from "../notes";
 import { badInput, noSummary } from "../errors";
-import { eventFromArgs, EventInputError } from "../integrations/calendar-time";
 import type { ToolExecuteContext, ToolExecuteResult } from "../registry";
 
 async function notionPageAllowed(userId: string, workspaceId: string, page: string): Promise<boolean> {
@@ -28,43 +27,6 @@ async function driveFileAllowed(userId: string, workspaceId: string, file: strin
       return result.rows.some((row: { output: { links?: { id?: string | null }[] } | null }) => row.output?.links?.some((link) => link.id === file));
 }
 
-/**
- * A target (an issue, a page, a file) or an event's title and times has to be one this workspace may use, so an action can never reach a
- * destination the operator did not configure (FR-033). Checked when the button is clicked, before any run is stored,
- * and again when the tool runs, because a composed run only learns some arguments later. Only arguments that are
- * present are checked: a missing required one is reported elsewhere.
- */
-export async function checkTargets(toolId: string, userId: string, workspaceId: string, args: Record<string, unknown>): Promise<void> {
-  const binding = bindingFor(toolId);
-  if (!binding) return;
-  const dest = integrationConfig(binding.integration).destination ?? "";
-
-  // An event needs a real title and real times BEFORE anything is created (FR-050). Only checked once both the title
-  // and the start are present; a missing required one is reported by the click's own "has to be filled in" check.
-  if (toolId === "calendar_create_event" && args.title !== undefined && args.start !== undefined) {
-    try {
-      eventFromArgs(args);
-    } catch (error) {
-      if (error instanceof EventInputError) throw badInput(error.message);
-      throw error;
-    }
-  }
-  if (toolId === "jira_add_comment" && args.key !== undefined) {
-    // The whole key has to be <PROJECT>-<number>: "KYOTO-1" is not in project "KYO".
-    const escaped = dest.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    if (!dest || !new RegExp(`^${escaped}-[1-9]\\d*$`).test(String(args.key))) throw badInput('"key" is not an issue in the configured project.');
-  }
-  if (toolId === "github_comment_on_issue" && args.issue !== undefined) {
-    if (typeof args.issue !== "number" || !Number.isInteger(args.issue) || args.issue < 1) throw badInput('"issue" has to be a whole number.');
-  }
-  if (toolId === "notion_append_blocks" && args.page !== undefined) {
-    if (!(await notionPageAllowed(userId, workspaceId, String(args.page)))) throw badInput('"page" has to be a Notion page this workspace created.');
-  }
-  if (toolId === "drive_get_share_link" && args.file !== undefined) {
-    if (!(await driveFileAllowed(userId, workspaceId, String(args.file)))) throw badInput('"file" has to be a Drive file this workspace created.');
-  }
-}
-
 export function integrationExecute(toolId: string) {
   return async (ctx: ToolExecuteContext): Promise<ToolExecuteResult> => {
     const binding = bindingFor(toolId);
@@ -73,7 +35,24 @@ export function integrationExecute(toolId: string) {
     const dest = cfg.destination ?? "";
     const args = { ...ctx.args };
 
-    await checkTargets(toolId, ctx.userId, ctx.workspaceId, args);
+    if (toolId === "jira_add_comment") {
+      const key = String(args.key ?? "");
+      if (!dest || !key.startsWith(dest)) throw badInput('"key" is not an issue in the configured project.');
+    }
+    if (toolId === "github_comment_on_issue") {
+      const issue = args.issue;
+      if (typeof issue !== "number" || issue < 1) throw badInput('"issue" has to be a whole number.');
+    }
+    if (toolId === "notion_append_blocks") {
+      if (!(await notionPageAllowed(ctx.userId, ctx.workspaceId, String(args.page ?? "")))) {
+        throw badInput('"page" has to be a Notion page this workspace created.');
+      }
+    }
+    if (toolId === "drive_get_share_link") {
+      if (!(await driveFileAllowed(ctx.userId, ctx.workspaceId, String(args.file ?? "")))) {
+        throw badInput('"file" has to be a Drive file this workspace created.');
+      }
+    }
     if (toolId === "drive_upload_markdown" || toolId === "drive_create_doc_from_summary") {
       const summary = await listSummary(ctx.userId, ctx.workspaceId);
       if (!summary) throw noSummary();
@@ -85,13 +64,7 @@ export function integrationExecute(toolId: string) {
 
     const connector = getConnector();
     if (!connector.available(toolId)) throw new ConnectorError("not_connected");
-    let mapped: Record<string, unknown>;
-    try {
-      mapped = binding.toArguments(args, dest);
-    } catch (error) {
-      if (error instanceof EventInputError) throw badInput(error.message);
-      throw error;
-    }
+    const mapped = binding.toArguments(args, dest);
     if (dest && !JSON.stringify(mapped).includes(dest) && binding.toolId !== "github_create_gist" && !binding.toolId.startsWith("gmail_")) {
       // dest is always added by toArguments for destination-scoped tools; gist has no dest override.
     }
