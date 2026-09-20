@@ -66,7 +66,7 @@ export function buildRequest(
 // "Group 3", "Untitled", "Miscellaneous", "Tabs 2" ... names that say nothing about the tabs.
 const GENERIC_NAME = /^(group|cluster|untitled|unnamed|miscellaneous|misc|other|tabs?|workspace)\s*[#\-:]?\s*\d*$/i;
 
-function usableName(value: unknown): string | null {
+export function usableName(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const name = value.trim();
   if (name.length < 1 || name.length > NAME_MAX) return null;

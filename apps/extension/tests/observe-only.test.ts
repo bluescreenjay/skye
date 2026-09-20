@@ -40,7 +40,9 @@ describe("the extension only observes: no call can change the browser's tabs or 
 
   it.each(forbidden.map((re) => [String(re), re] as const))("no source file matches %s", (_name, re) => {
     for (const file of files) {
-      if (re.source.includes("sidePanel") && file.endsWith("sidepanel-gate.ts")) continue;
+      // The Side Panel is opened by its gate, and (feature 011) by the shortcut handler, which must call
+      // sidePanel.open in the same turn as the shortcut.
+      if (re.source.includes("sidePanel") && (file.endsWith("sidepanel-gate.ts") || file.endsWith("command-shortcut.ts"))) continue;
       const text = readFileSync(file, "utf8");
       expect(text, file).not.toMatch(re);
     }

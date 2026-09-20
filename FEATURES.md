@@ -27,7 +27,7 @@ How to use: for each feature, run `/speckit-specify` and paste the **Specify pro
 | 009 | Plan generation | — | ✂ cut (its checklist is an output of the 010 agents) |
 | 010 | Workspace agents | P0 | ☑ implemented (Home card first; the sidebar reuses the list later) |
 | 010b | MCP + local action tools | Stretch | ☐ |
-| 011 | Global command bar | P0 | ☐ |
+| 011 | Global command bar | P0 | ☑ |
 | 012 | Saved workspaces + soft suggestions | P1 | ☐ |
 | 013 | Desktop workspace voice (ElevenLabs) | P1 | ☐ |
 | 014 | Mobile companion | Stretch | ☐ |
@@ -312,7 +312,7 @@ Add a fixed list of workspace agents to each expanded card on Home, laid out as 
 
 **Out of scope:** Arbitrary web automation, shopping checkout, voice (013); **010b** MCP / SaaS tools and silent tool loops (those may plug into ⌘K later as optional stretch — see 010b)
 
-**Depends on:** 004, 005, 005b, 006, 007, **010**  
+**Depends on:** 004 005, 005b, 006, 007, **010**  
 **Unblocks:** MVP complete
 
 **Done when:** User can trigger organize/create/cleanup via natural language and see Home and the sidebar update, and can run at least one 010 agent (e.g. summarize) for the current or named workspace from ⌘K with the result saved like a Home agent run.

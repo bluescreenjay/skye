@@ -8,6 +8,8 @@ import { defineManifest } from "@crxjs/vite-plugin";
 //   chrome_url_overrides (new-tab takeover deferred),
 //   default_popup (Home is a full page), tabs, activeTab, <all_urls>,
 //   content_scripts, unlimitedStorage.
+// Feature 011 adds exactly one key, `commands`, for the command bar shortcut. It needs no
+// permission; if Chrome cannot assign the key, the person sets one at chrome://extensions/shortcuts.
 export default defineManifest({
   manifest_version: 3,
   name: "AI Browser",
@@ -21,6 +23,13 @@ export default defineManifest({
   // geolocation: Home greeting weather (page geolocation on chrome-extension://).
   permissions: ["storage", "alarms", "scripting", "geolocation", "sidePanel", "favicon"],
   side_panel: { default_path: "sidepanel.html" },
+  // The command bar shortcut (feature 011). The handler is src/command-shortcut.ts.
+  commands: {
+    "open-command-bar": {
+      suggested_key: { default: "Ctrl+K", mac: "Command+K" },
+      description: "Open the command bar",
+    },
+  },
   // Lets the extension read url/title of web pages and their text, and reach
   // the API without CORS. Internal and extension pages never match.
   host_permissions: ["http://*/*", "https://*/*"],

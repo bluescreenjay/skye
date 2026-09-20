@@ -120,6 +120,12 @@ Same icon that opens Home. Nothing is shown on the badge while ingest is fine.
 | `src/heartbeat.ts` | The 30-second tick and the reset at install and browser start. |
 | `src/filters.ts`, `config.ts`, `status.ts` | Eligibility rules, build-time config, the badge. |
 
+## Command bar
+
+Press **⌘K** / **Ctrl+K** (or the ⌘K button on Home and in the Side Panel) to open the command bar. Chrome registers the shortcut as `open-command-bar` in the manifest; rebind it at `chrome://extensions/shortcuts` if another extension took the key. On a normal web page the shortcut opens the Side Panel first (same user gesture), then the bar; on Home only the bar opens; on `chrome://` and other ineligible pages it falls back to opening Home.
+
+Type a short sentence and press Enter. Opening and typing send no request. Organize, create, clean up, agents, move/rename/merge, find, and recall all go through the same box. Changes that move or rename wait for Confirm with an exact preview; closing duplicate tabs after "clean up" also waits for Confirm and cannot be undone. A bar closed mid-command keeps running and shows the result when reopened.
+
 ## More
 
 - Home spec and validation walkthrough: `specs/005-home-all-workspaces/` (`quickstart.md`).

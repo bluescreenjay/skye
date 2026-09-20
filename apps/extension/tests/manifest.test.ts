@@ -45,7 +45,6 @@ describe("manifest", () => {
     "options_ui",
     "devtools_page",
     "omnibox",
-    "commands",
     "sandbox",
   ])("does not declare %s", (key) => {
     expect(m).not.toHaveProperty(key);
@@ -58,6 +57,15 @@ describe("manifest", () => {
       expect(asked).not.toContain(permission);
     },
   );
+
+  it("declares exactly one command, the command bar shortcut, and needs no permission for it (feature 011)", () => {
+    expect(m.commands).toEqual({
+      "open-command-bar": {
+        suggested_key: { default: "Ctrl+K", mac: "Command+K" },
+        description: "Open the command bar",
+      },
+    });
+  });
 
   it("does not add an optional permission path either", () => {
     expect(m).not.toHaveProperty("optional_permissions");

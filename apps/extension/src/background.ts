@@ -7,6 +7,7 @@ import { createCollector } from "./collector";
 import { createConfigLoader } from "./config";
 import { createHeartbeat, resetSyncState } from "./heartbeat";
 import { createDrainScheduler, createSender } from "./sender";
+import { installCommandShortcut } from "./command-shortcut";
 import { installSidePanelGate } from "./sidepanel-gate";
 import { createSnapshotter } from "./snapshot";
 import { applyStatus } from "./status";
@@ -106,4 +107,7 @@ chrome.action.onClicked.addListener(() => {
 
 // Close/disable the Side Panel on Home and other non-web tabs; keep it on pages.
 installSidePanelGate();
+
+// The command bar shortcut (feature 011). It opens the Side Panel on a page, or Home when there is none.
+installCommandShortcut({ openHome: () => chrome.tabs.create({ url: chrome.runtime.getURL("home.html") }) });
 
