@@ -91,6 +91,7 @@ export async function runSuggestPass(options: {
       const { suggestions, note } = validateSuggestions(raw, allowed, facts, {
         summary: summary?.text ?? "",
         workspace: gathered.workspaceName,
+        workspaceId: workspace.id,
       });
       if (suggestions.length === 0) return failedSet();
       const set: SuggestionSet = {

@@ -31,6 +31,7 @@ How to use: for each feature, run `/speckit-specify` and paste the **Specify pro
 | 012 | Saved workspaces + soft suggestions | P1 | ☐ |
 | 013 | Desktop workspace voice (ElevenLabs) | P1 | ☐ |
 | 014 | Mobile companion | Stretch | ☐ |
+| 015 | Mobile voice + project assistant | Stretch | ☐ spec drafted |
 
 ---
 
@@ -450,6 +451,16 @@ Bounded tool loop on click (small max turns). Do not require MCP for the origina
 ```text
 Add a mobile companion as a separate mobile web app that is a remote interface to the same persistent workspaces—not a second browser and not a Side Panel clone. Pair the phone to the desktop person via a short-lived QR code or one-time code shown on desktop; redeeming it issues a durable per-device credential for the same person. Users can list workspaces (Home-like), ask questions, review plans and agent results, and trigger actions. Lightly include ElevenLabs voice for hearing chat replies and optional speak-to-ask on mobile—text stays the source of truth and voice must not block pairing or typed chat. Desktop Home, desktop sidebar, and mobile must share the same workspace state.
 ```
+
+---
+
+### 015 — Mobile voice + project assistant
+
+**What:** ElevenLabs speech-to-text for the paired phone, questions across all of a person's workspaces, and natural-language requests for reviewed Notion and email actions.
+
+**In scope:** Editable voice transcript; separate all-projects chat with citations and coverage; reference resolution for “that”; explicit proposal review and approval through the existing 010b action tools.
+
+**Depends on:** 014, 008, 010b. See [feature specification](specs/015-mobile-voice-project-assistant/spec.md).
 
 ---
 

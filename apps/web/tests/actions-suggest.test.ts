@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ModelUnconfiguredError } from "@/src/llm/errors";
+import { allowedTools } from "@/src/actions/access";
+import { validateSuggestions } from "@/src/actions/suggest/validate";
 import { reset } from "./helpers";
 import {
   ScriptedActionModel,
@@ -53,6 +55,51 @@ describe("action suggestions", () => {
     ]);
     return ws;
   }
+
+  it("puts two different creation services first even when the model picks only local actions", () => {
+    const keys = ["MCP_NOTION_COMMAND", "MCP_NOTION_TOKEN", "NOTION_PARENT_PAGE_ID", "MCP_GOOGLE_DRIVE_URL", "MCP_GOOGLE_GMAIL_URL", "DRIVE_FOLDER_ID", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REFRESH_TOKEN", "INTEGRATION_OWNER_USER_ID"];
+    const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+    try {
+      process.env.MCP_NOTION_COMMAND = "notion-server";
+      process.env.MCP_NOTION_TOKEN = "test-token";
+      process.env.NOTION_PARENT_PAGE_ID = "test-page";
+      process.env.MCP_GOOGLE_DRIVE_URL = "https://example.test/mcp";
+      process.env.MCP_GOOGLE_GMAIL_URL = "https://example.test/gmail";
+      process.env.DRIVE_FOLDER_ID = "test-folder";
+      process.env.GOOGLE_CLIENT_ID = "test-client";
+      process.env.GOOGLE_CLIENT_SECRET = "test-secret";
+      process.env.GOOGLE_REFRESH_TOKEN = "test-refresh";
+      process.env.INTEGRATION_OWNER_USER_ID = ALICE;
+      const facts = { hasSummary: true, hasWebTabs: true, queryCount: 0, planCount: 0 };
+      const result = validateSuggestions(localSuggestions(["list_workspace_tabs", "write_summary"]), allowedTools(ALICE, facts), facts, {
+        summary: "Kyoto research summary",
+        workspace: "kyoto trip",
+        workspaceId: "workspace-a",
+      });
+      expect(new Set(result.suggestions.slice(0, 4).map((item) => item.service))).toEqual(new Set(["gmail", "calendar", "notion", "drive"]));
+      expect(new Set(result.suggestions.slice(0, 4).map((item) => item.toolId))).toEqual(new Set(["gmail_create_draft", "calendar_create_event", "notion_create_page", "drive_create_doc_from_summary"]));
+      const calendar = result.suggestions.find((item) => item.toolId === "calendar_create_event")!;
+      expect(calendar.preview).toContainEqual({ name: "guests", value: "none (no invitations are sent)" });
+      expect(calendar.args.start).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(result.suggestions.map((item) => item.id)).toEqual(["s1", "s2", "s3", "s4", "s5", "s6"]);
+      const nextWorkspace = validateSuggestions(localSuggestions(["list_workspace_tabs", "write_summary"]), allowedTools(ALICE, facts), facts, {
+        summary: "Kyoto research summary", workspace: "kyoto trip", workspaceId: "workspace-b",
+      });
+      expect(nextWorkspace.suggestions[0].service).not.toBe(result.suggestions[0].service);
+      expect(new Set(nextWorkspace.suggestions.slice(0, 4).map((item) => item.service))).toEqual(new Set(["gmail", "calendar", "notion", "drive"]));
+      const withSearch = validateSuggestions({ suggestions: [
+        { tool: "notion_search", label: "Search Notion", reason: "Find notes", argsJson: '{"text":"Kyoto"}' },
+        { tool: "notion_create_page", label: "Create note", reason: "Save the research", argsJson: '{"title":"Kyoto notes","content":"Research"}' },
+      ] }, allowedTools(ALICE, facts), facts, { summary: "Kyoto research summary", workspace: "kyoto trip" });
+      expect(withSearch.suggestions.map((item) => item.toolId)).not.toContain("notion_search");
+      expect(new Set(withSearch.suggestions.slice(0, 4).map((item) => item.service))).toEqual(new Set(["notion", "gmail", "calendar", "drive"]));
+    } finally {
+      for (const key of keys) {
+        if (previous[key] === undefined) delete process.env[key];
+        else process.env[key] = previous[key];
+      }
+    }
+  });
 
   it("makes one suggest call, keeps 3 to 6 local tools, and runs nothing", async () => {
     const model = new ScriptedActionModel({
