@@ -11,6 +11,7 @@ const SCHEMAS = [
   "010_agents.sql",
   "010b_actions.sql",
   "014_mobile_devices.sql",
+  "015_project_assistant.sql",
 ].map((file) =>
   fileURLToPath(new URL(`../../../packages/shared/sql/${file}`, import.meta.url)),
 );

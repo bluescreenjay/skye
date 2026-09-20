@@ -15,6 +15,7 @@ For the mobile companion, apply the independently revocable device and pairing-o
 
 ```bash
 node apps/web/scripts/apply-sql.mjs packages/shared/sql/014_mobile_devices.sql
+node apps/web/scripts/apply-sql.mjs packages/shared/sql/015_project_assistant.sql
 ```
 
 `DATABASE_URL` and `DEVICE_TOKEN_SECRET` live in the repo-root `.env`.
@@ -44,6 +45,10 @@ Pairing and workspace curls: `specs/003-workspace-persistence-api/quickstart.md`
 | `POST /api/workspaces/:id/chat`, `GET /api/workspaces/:id/chat` | Ask about a workspace and get a streamed answer; read its saved conversation (feature 008) |
 | `POST /api/pairing/offers`, `POST /api/pairing/redeem` | Create a short-lived desktop offer; redeem it once into a mobile device token (feature 014) |
 | `GET /api/devices`, `POST /api/devices/:id/revoke` | List a person's device credentials and revoke one immediately (feature 014) |
+| `POST /api/voice/transcribe` | Paired device voice upload to ElevenLabs Scribe v2; returns editable text (feature 015) |
+| `POST /api/voice/synthesize` | Paired device text-to-speech playback through ElevenLabs (feature 015) |
+| `GET/POST /api/projects/chat` | Separate all-projects conversation with bounded workspace context and coverage (feature 015) |
+| `/api/action-proposals` | Prepare, review, approve, cancel, and read Notion/email proposals; `/send` separately confirms email (feature 015) |
 | `GET /api/workspaces/:id/agents`, `POST /api/workspaces/:id/agents/:agentId/run` | Read a workspace's agents card in one call (no AI request); press an agent, which returns `202` at once with a running run (feature 010) |
 | `GET /api/workspaces/:id/agents/:agentId/runs`, `PATCH /api/workspaces/:id/plan-items/:itemId` | An agent's earlier runs, newest first; tick or untick a "next steps" checklist item (feature 010) |
 
@@ -166,4 +171,3 @@ Connection variables are listed in the repo-root `.env.example` (`MCP_*`, `GITHU
 `ACTIONS_LIVE=1` runs one suggestion pass and one composed local run against the real provider on fixture tabs. `ACTIONS_LIVE_GITHUB=1` (and `JIRA`, `NOTION`, `SLACK`, `GOOGLE`, which covers Drive, Gmail, and Calendar) connects and calls `tools/list` only — it never writes and never reads mail.
 
 A scratch-copy `next build --webpack` (a temp tree, never the running `apps/web/.next`) compiled with `serverExternalPackages: ["@modelcontextprotocol/sdk"]`. The seven action routes registered as dynamic. Leave that package external; the SDK is not bundled.
-

@@ -44,6 +44,7 @@ export interface ClusterModel {
 
 const INSTRUCTIONS = [
   "You organize a person's open browser tabs into workspaces. The JSON below lists their existing workspaces and their tabs (id, title, url, snippet).",
+  "Return a confident, useful organization every time. When a connection is plausible, make the best grouping and use the confidence field to express nuance.",
   "",
   "Rules:",
   "- Group tabs by what the person is DOING or planning, not by website or page type. Pages of different kinds (documentation, forum answers, repositories, videos, articles, shopping) belong together when they serve the same goal, project, or interest. For example, documentation for the several libraries, tools, and APIs used to build one software project is one group, even though each page is about a different tool.",

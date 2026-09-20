@@ -11,6 +11,9 @@ import {
 import { focusOrOpenSavedTab } from "../home/navigation";
 import { TabRow } from "../ui/TabRow";
 import { ToolPlaceholders } from "./ToolPlaceholders";
+import { WorkspaceChat } from "../home/WorkspaceChat";
+import { executeActionIntents } from "../home/action-intents";
+import { ActionsGroup } from "../ui/ActionsGroup";
 import { fetchPanelView } from "./api";
 import { createSidebarContext, getPanelWindowId } from "./context";
 import { openHomeAndClosePanel } from "./navigation";
@@ -261,7 +264,23 @@ export function Sidebar() {
         <section className="panel-tabs" aria-hidden />
       )}
 
-      <ToolPlaceholders />
+      {view.kind === "named" ? (
+        <div className="panel-dock">
+          <WorkspaceChat workspaceId={view.workspace.id} />
+          <ActionsGroup
+            workspaceId={view.workspace.id}
+            onOpenTab={(tabUrl) => {
+              void chrome.tabs.create({ url: tabUrl, active: false });
+            }}
+            executeIntents={(intents) => executeActionIntents(intents, view.workspace.id)}
+            onCopy={(text) => {
+              void navigator.clipboard.writeText(text).catch(() => undefined);
+            }}
+          />
+        </div>
+      ) : (
+        <ToolPlaceholders />
+      )}
     </aside>
   );
 }
