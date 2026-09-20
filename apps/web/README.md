@@ -118,7 +118,7 @@ Five one-shot agents run on **one workspace**: `summarize`, `compare`, `what's m
 
 - **A model is called only when an agent is pressed**, once per run, with no automatic retry. Reading the card or the runs, changing tabs, ingest, clustering, chat, and every refused press make no agent request. Nothing is charged for a refused press.
 - **Run lifecycle.** A press stores a `pending` run (shown as `running`) and returns `202` immediately; the job carries on in the server process. It ends `succeeded` (with a validated result) or `failed` (with one of four fixed sentences, never the AI service's own words). A run still pending after 120 seconds is marked `failed` (`timed_out`) by the next read or press, so a stopped server never leaves a run "running" forever, and a late job then writes nothing. The whole job is limited to 50 seconds.
-- **Limits.** One run of an agent at a time per workspace (`409 run_in_progress`); three runs at a time per person (`429 too_many_runs`); the latest 10 runs per agent per workspace are kept, plus the newest successful one if it is older.
+- **Limits.** One run of an agent at a time per workspace (`409 run_in_progress`); five runs at a time per person (`429 too_many_runs`); the latest 10 runs per agent per workspace are kept, plus the newest successful one if it is older.
 - **Reading pages.** Each distinct page is read once, at its address **without the query string and fragment**, by a small reader (`src/agents/pages/`) that connects only to addresses it has checked: `https` on port 443 only, no credentials, no IP literals or local names, every resolved address must be public, redirects (at most 2) are re-checked, and no cookie or authorization is ever sent. A page that cannot be read (needs sign-in, too large, too slow, not a web page, no text) is described from its title, address, and stored excerpt, and the run says so in `sources`. Page text is untrusted data: it goes only inside one JSON block of the prompt.
 - **Nothing crosses a boundary.** Every query is scoped to the signed-in user and the workspace; `other` (tabs with no workspace) is `400 not_a_workspace`. Titles, addresses, excerpts, page text, plan items, chat messages, prompts, and answers are never logged, and never appear in an error body. Quotes are kept only if they really appear in the material of the tab they cite.
 - **Model.** Agents use the `actions` purpose, which defaults to `gpt-oss-120b` on the VT provider (override with `LLM_MODEL_ACTIONS`; `LLM_PROVIDER=gemini` uses the backup), and share the daily guardrail (the `actions` share is 120 of `LLM_DAILY_CAP`). The former `plan` purpose no longer exists.
@@ -146,3 +146,24 @@ Automated tests use a fake agent model and a fake page reader and never call a r
 AGENTS_LIVE=1 pnpm --filter @ai-browser/web test agents-live --disable-console-intercept                       # the default (vt) provider
 LLM_PROVIDER=gemini AGENTS_LIVE=1 pnpm --filter @ai-browser/web test agents-live --disable-console-intercept   # the backup
 ```
+
+## Action tools (feature 010b)
+
+Workspace cards can suggest and run a fixed catalog of 30 tools. MCP connections are optional: with none configured, the 12 local tools and the five 010 agents keep working.
+
+| Route | Purpose |
+| --- | --- |
+| `POST /api/workspaces/:id/actions/suggest` | Suggestion pass (one AI request, or none when reused). Never runs a tool. |
+| `GET /api/workspaces/:id/actions` | Saved summary, queries, latest run per tool. No AI, no service call. |
+| `POST /api/workspaces/:id/actions/:toolId/run` | One click, one run (`202`, except mail search `200`) |
+| `POST /api/workspaces/:id/actions/runs/:runId/intents/:intentId` | Extension reports a browser intent |
+| `POST /api/workspaces/:id/actions/runs/:runId/confirm` | Send a prepared email |
+| `POST /api/workspaces/:id/actions/runs/:runId/cancel` | Cancel a prepared email |
+| `GET /api/workspaces/:id/summary/export?format=md\|pdf` | Saved summary as a file |
+
+Connection variables are listed in the repo-root `.env.example` (`MCP_*`, `GITHUB_REPO`, `JIRA_*`, `NOTION_*`, `SLACK_*`, `DRIVE_*`, `GOOGLE_*`, `INTEGRATION_OWNER_USER_ID`). Stdio servers are spawned with a **minimal env** (that integration's credential plus `PATH`), never the whole process environment.
+
+`ACTIONS_LIVE=1` runs one suggestion pass and one composed local run against the real provider on fixture tabs. `ACTIONS_LIVE_GITHUB=1` (and `JIRA`, `NOTION`, `SLACK`, `GOOGLE`) connects and calls `tools/list` only — it never writes and never reads mail.
+
+A scratch-copy `next build --webpack` (a temp tree, never the running `apps/web/.next`) compiled with `serverExternalPackages: ["@modelcontextprotocol/sdk"]`. The seven action routes registered as dynamic. Leave that package external; the SDK is not bundled.
+

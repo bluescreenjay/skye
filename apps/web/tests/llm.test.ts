@@ -163,9 +163,11 @@ describe("Gemini backup provider (llm/gemini.ts)", () => {
 });
 
 describe("feature 010: the plan purpose is gone and agents have their own share", () => {
-  it("has four purposes, gives actions 120, and the shares plus the spill-over pool add up to the daily cap", () => {
-    expect(Object.keys(SHARES).sort()).toEqual(["actions", "chat", "cluster", "command"]);
+  it("has five purposes, gives actions 120 and suggest 40, and the shares plus the spill-over pool add up to the daily cap", () => {
+    expect(Object.keys(SHARES).sort()).toEqual(["actions", "chat", "cluster", "command", "suggest"]);
     expect(SHARES.actions).toBe(120);
+    expect(SHARES.suggest).toBe(40);
+    expect(SHARES.command).toBe(20);
     expect(Object.values(SHARES).reduce((a, b) => a + b, 0) + SPILL_OVER).toBe(DEFAULT_DAILY_CAP);
   });
 });

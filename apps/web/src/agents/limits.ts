@@ -29,7 +29,7 @@ export const READ_CONCURRENCY = 4;
 export const PROCESS_READ_SLOTS = 8;
 
 /** Runs one person may have going at once. */
-export const MAX_RUNNING_PER_USER = 3;
+export const MAX_RUNNING_PER_USER = 5;
 /** Runs kept per agent per workspace. */
 export const KEEP_RUNS = 10;
 /** A run still `pending` after this long is treated as crashed. */

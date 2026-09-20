@@ -132,7 +132,7 @@ describe("US1: ask a question about a workspace and get an answer", () => {
     const ws = await makeWorkspace(ALICE, "Blank");
     const reply = await sendChat(ALICE, ws.id, { message: "summarize" });
     expect(reply.status).toBe(200);
-    expect(dataOf(fake.calls[0].system)).toEqual({ workspace: { name: "Blank", tabsInWorkspace: 0, tabsShown: 0 }, tabs: [], plan: [] });
+    expect(dataOf(fake.calls[0].system)).toEqual({ workspace: { name: "Blank", tabsInWorkspace: 0, tabsShown: 0 }, tabs: [], plan: [], summary: null, savedQueries: [], refs: [] });
     expect(reply.json.contextInfo).toEqual({ tabsIncluded: 0, tabsTotal: 0, planItemsIncluded: 0, messagesIncluded: 1 });
   });
 

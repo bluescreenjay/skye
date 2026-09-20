@@ -10,6 +10,7 @@ import type { DbWorkspace } from "../map";
 import type { ChatTurn } from "../llm";
 import { stripUrl } from "../cluster/prompt";
 import { recentTurns } from "./messages";
+import { listQueries, listRefs, listSummary } from "../actions/notes";
 
 export const LIMITS = {
   tabs: 40,
@@ -82,10 +83,18 @@ export async function buildContext(userId: string, workspace: Pick<DbWorkspace, 
   );
 
   const tabsTotal = tabs.rows.length > 0 ? Number(tabs.rows[0].total) : 0;
+  const [summary, savedQueries, refs] = await Promise.all([
+    listSummary(userId, workspace.id),
+    listQueries(userId, workspace.id),
+    listRefs(userId, workspace.id),
+  ]);
   const data = {
     workspace: { name: cut(workspace.name, LIMITS.name), tabsInWorkspace: tabsTotal, tabsShown: tabs.rows.length },
     tabs: tabs.rows.map((t) => ({ title: cut(t.title, LIMITS.title), url: stripUrl(t.url), excerpt: cut(t.snippet, LIMITS.excerpt) })),
     plan: plan.rows.map((p) => ({ text: cut(p.text, LIMITS.planText), done: p.done })),
+    summary: summary ? { text: cut(summary.text, 1_200) } : null,
+    savedQueries,
+    refs: refs.map((ref) => ({ quote: cut(ref.quote, 300), url: stripUrl(ref.url) })),
   };
 
   return {

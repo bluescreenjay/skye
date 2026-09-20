@@ -54,52 +54,61 @@ async function keepRecentRuns(userId: string, workspaceId: string, agentId: stri
   await applyRetention({ query }, userId, workspaceId, agentId).catch(() => undefined);
 }
 
+/** The answer step shared with write_summary: read pages, one model answer, validate. */
+export async function produceOutput(
+  agent: AgentDef,
+  gathered: Gathered,
+  model: AgentModel,
+  signal: AbortSignal,
+): Promise<{ result: ReturnType<typeof validateAnswer>; sources: AgentSource[]; coverage: { tabsTotal: number; tabsIncluded: number; pagesRead: number } }> {
+  const outcomes = new Map((await readPages(gathered.tabs.map((t) => ({ tabId: t.id, url: t.fetchUrl })))).map((o) => [o.tabId, o]));
+  const promptTabs: RunMaterial["tabs"] = gathered.tabs.map((t) => {
+    const page = outcomes.get(t.id);
+    return page?.text != null
+      ? { id: t.id, title: t.title, url: t.url, read: "page", text: page.text }
+      : { id: t.id, title: t.title, url: t.url, read: "excerpt", text: t.excerpt };
+  });
+  const pagesRead = promptTabs.filter((t) => t.read === "page").length;
+  const material: RunMaterial = {
+    workspaceName: gathered.workspaceName,
+    tabsTotal: gathered.tabsTotal,
+    pagesRead,
+    tabs: promptTabs,
+    plan: gathered.plan,
+    chat: gathered.chat,
+    summary: gathered.summary,
+    savedQueries: gathered.savedQueries,
+    refs: gathered.refs,
+  };
+  const answer = await model.answer({ agentId: agent.id, prompt: buildPrompt(agent, material), schema: agent.schema }, signal);
+  const checkable: MaterialTab[] = promptTabs.map((t) => ({ id: t.id, title: t.title, url: t.url, material: t.text }));
+  const result = validateAnswer(agent, answer, checkable);
+  const sources: AgentSource[] = gathered.tabs.map((t, i) => {
+    const page = outcomes.get(t.id);
+    const read = promptTabs[i].read;
+    return { title: t.title, url: t.url, read, reason: read === "page" ? null : (page?.reason ?? "error"), trimmed: t.trimmed, truncated: read === "page" && page?.truncated === true };
+  });
+  return { result, sources, coverage: { tabsTotal: gathered.tabsTotal, tabsIncluded: gathered.tabs.length, pagesRead } };
+}
+
 /** The job. It marks its own run failed on any error, so it never throws. */
 async function executeRun(runId: string, userId: string, workspaceId: string, agent: AgentDef, gathered: Gathered, model: AgentModel): Promise<void> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), jobLimitMs());
   try {
-    // Read the pages first (inside the job, after the run is stored). A tab whose page could not be
-    // read is described from its title, address, and stored excerpt, and the run says so.
-    const outcomes = new Map((await readPages(gathered.tabs.map((t) => ({ tabId: t.id, url: t.fetchUrl })))).map((o) => [o.tabId, o]));
-    const promptTabs: RunMaterial["tabs"] = gathered.tabs.map((t) => {
-      const page = outcomes.get(t.id);
-      return page?.text != null
-        ? { id: t.id, title: t.title, url: t.url, read: "page", text: page.text }
-        : { id: t.id, title: t.title, url: t.url, read: "excerpt", text: t.excerpt };
-    });
-    const pagesRead = promptTabs.filter((t) => t.read === "page").length;
-    const material: RunMaterial = {
-      workspaceName: gathered.workspaceName,
-      tabsTotal: gathered.tabsTotal,
-      pagesRead,
-      tabs: promptTabs,
-      plan: gathered.plan,
-      chat: gathered.chat,
-    };
-    const answer = await model.answer({ agentId: agent.id, prompt: buildPrompt(agent, material), schema: agent.schema }, controller.signal);
-
-    const checkable: MaterialTab[] = promptTabs.map((t) => ({ id: t.id, title: t.title, url: t.url, material: t.text }));
-    const result = validateAnswer(agent, answer, checkable);
-    const sources: AgentSource[] = gathered.tabs.map((t, i) => {
-      const page = outcomes.get(t.id);
-      const read = promptTabs[i].read;
-      return { title: t.title, url: t.url, read, reason: read === "page" ? null : (page?.reason ?? "error"), trimmed: t.trimmed, truncated: read === "page" && page?.truncated === true };
-    });
-    const output = { result, sources, coverage: { tabsTotal: gathered.tabsTotal, tabsIncluded: gathered.tabs.length, pagesRead } };
-    if (result.kind === "checklist") {
-      // One transaction: the run finishes and the plan items are rewritten together, or neither. A run
-      // that was already reaped as stale matches no row, so the rollback leaves the checklist alone.
+    const output = await produceOutput(agent, gathered, model, controller.signal);
+    if (output.result.kind === "checklist") {
+      const items = output.result.items;
       await withTransaction(async (client) => {
         if (!(await finishRunSucceeded(client, runId, userId, output))) throw new AbandonedRun();
-        await rewriteChecklist(client, userId, workspaceId, result.items);
+        await rewriteChecklist(client, userId, workspaceId, items);
       });
     } else {
       await finishRunSucceeded({ query }, runId, userId, output);
     }
     await keepRecentRuns(userId, workspaceId, agent.id);
   } catch (error) {
-    if (error instanceof AbandonedRun) return; // already reaped as stale and marked failed: leave it as it is
+    if (error instanceof AbandonedRun) return;
     await failRun(runId, userId, failureFor(error, { timedOut: controller.signal.aborted }));
     await keepRecentRuns(userId, workspaceId, agent.id);
   } finally {

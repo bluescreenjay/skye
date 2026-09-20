@@ -48,6 +48,7 @@ describe("VT / OpenAI-compatible provider: the request", () => {
     expect(DEFAULT_MODELS).toEqual({
       cluster: "gpt-oss-120b-thinking-low",
       command: "gpt-oss-120b-thinking-low",
+      suggest: "gpt-oss-120b-thinking-low",
       chat: "gpt-oss-120b-thinking-low",
       actions: "gpt-oss-120b",
     });

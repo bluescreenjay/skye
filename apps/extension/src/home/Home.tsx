@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState, type DragEvent, type MouseEve
 import type { TabRef, Workspace } from "@ai-browser/shared";
 import { TabMark } from "../ui/TabMark";
 import { AgentsColumn } from "../ui/AgentsColumn";
+import { ActionsGroup } from "../ui/ActionsGroup";
+import { executeActionIntents } from "./action-intents";
 import { matchesAddress } from "../ui/agents";
 import { TabRow } from "../ui/TabRow";
 import { loadDirectory, moveTab, renameWorkspace, runCluster } from "./api";
@@ -469,6 +471,14 @@ function WorkspaceCardView({
             <WorkspaceChat workspaceId={card.workspace.id} />
           </div>
           <div className="band band-agents">
+            <ActionsGroup
+              workspaceId={card.workspace.id}
+              onOpenTab={openCitedTab}
+              executeIntents={(intents) => executeActionIntents(intents, card.workspace.id)}
+              onCopy={(text) => {
+                void navigator.clipboard.writeText(text).catch(() => undefined);
+              }}
+            />
             <AgentsColumn workspaceId={card.workspace.id} onOpenTab={openCitedTab} />
           </div>
         </div>
