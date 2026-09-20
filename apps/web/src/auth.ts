@@ -18,7 +18,12 @@ export function hashDeviceToken(token: string): string {
 export async function findUserByToken(token: string): Promise<User | null> {
   const hash = hashDeviceToken(token);
   const result = await query<DbUser>(
-    "SELECT id, device_token_hash, created_at FROM users WHERE device_token_hash = $1",
+    `SELECT u.id, u.device_token_hash, u.created_at
+     FROM devices d JOIN users u ON u.id = d.user_id
+     WHERE d.token_hash = $1 AND d.revoked_at IS NULL
+     UNION ALL
+     SELECT id, device_token_hash, created_at FROM users WHERE device_token_hash = $1
+     LIMIT 1`,
     [hash],
   );
   const row = result.rows[0];

@@ -4,7 +4,13 @@ import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
 import { PGLiteSocketServer } from "@electric-sql/pglite-socket";
 
-const SCHEMAS = ["001_init.sql", "004_clustering.sql", "008_chat.sql", "010_agents.sql"].map((file) =>
+const SCHEMAS = [
+  "001_init.sql",
+  "004_clustering.sql",
+  "008_chat.sql",
+  "010_agents.sql",
+  "014_mobile_devices.sql",
+].map((file) =>
   fileURLToPath(new URL(`../../../packages/shared/sql/${file}`, import.meta.url)),
 );
 

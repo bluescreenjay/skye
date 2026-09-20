@@ -19,7 +19,7 @@ export default defineManifest({
   // storage: durable backlog. alarms: 30-second heartbeat.
   // scripting: read a short text snippet from a page.
   // geolocation: Home greeting weather (page geolocation on chrome-extension://).
-  permissions: ["storage", "alarms", "scripting", "geolocation", "sidePanel"],
+  permissions: ["storage", "alarms", "scripting", "geolocation", "sidePanel", "favicon"],
   side_panel: { default_path: "sidepanel.html" },
   // Lets the extension read url/title of web pages and their text, and reach
   // the API without CORS. Internal and extension pages never match.

@@ -14,6 +14,8 @@ import { closeHomeTab, openHomeTab } from "./navigation";
 import type { OrganizeStatus } from "./organize";
 import { loadWeatherPhrase } from "./weather";
 import { WorkspaceChat } from "./WorkspaceChat";
+import { createPairingOffer, loadDevices, revokeDevice } from "./pairing";
+import type { Device } from "@ai-browser/shared";
 
 const ACTIONS = ["summarize", "collect refs", "new artifact"] as const;
 
@@ -38,6 +40,8 @@ function greetingText(weather: string, cards: HomeDirectory["cards"]): string {
 export function Home() {
   const [directory, setDirectory] = useState<HomeDirectory>({ other: [], cards: [] });
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [recentWorkspaceIds, setRecentWorkspaceIds] = useState<string[]>([]);
+  const [risingWorkspaceId, setRisingWorkspaceId] = useState<string | null>(null);
   const [weather, setWeather] = useState("checking");
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -46,12 +50,26 @@ export function Home() {
   const [directoryReady, setDirectoryReady] = useState(false);
   const [correctionNote, setCorrectionNote] = useState("");
   const [enterMotion, setEnterMotion] = useState(true);
+  const [pairingOpen, setPairingOpen] = useState(false);
+  const [offer, setOffer] = useState<{ code: string; expiresAt: string; qrUrl: string } | null>(null);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [pairingMessage, setPairingMessage] = useState("");
   const suppressClicksUntil = useRef(0);
   const dragId = useRef<string | null>(null);
   const dragChromeId = useRef<number | null>(null);
   const dragRaf = useRef<number | null>(null);
   const organizing = useRef(false);
   const closing = useRef(createCloseInFlight());
+  const riseTimer = useRef<number | null>(null);
+
+  const orderedCards = [...directory.cards].sort((left, right) => {
+    const leftRecent = recentWorkspaceIds.indexOf(left.workspace.id);
+    const rightRecent = recentWorkspaceIds.indexOf(right.workspace.id);
+    if (leftRecent === -1 && rightRecent === -1) return 0;
+    if (leftRecent === -1) return 1;
+    if (rightRecent === -1) return -1;
+    return leftRecent - rightRecent;
+  });
 
   const refresh = useCallback(async () => {
     const { workspaces, tabRefs } = await loadDirectory();
@@ -84,6 +102,24 @@ export function Home() {
   useEffect(() => {
     void loadWeatherPhrase().then(setWeather);
   }, []);
+
+  const refreshDevices = useCallback(() => {
+    void loadDevices().then(setDevices);
+  }, []);
+
+  const startPairing = () => {
+    setPairingMessage("");
+    void createPairingOffer().then((next) => {
+      if (!next) { setPairingMessage("could not create a pairing code"); return; }
+      setOffer(next);
+      refreshDevices();
+    }).catch(() => setPairingMessage("could not create a pairing code"));
+  };
+
+  const togglePairing = () => {
+    setPairingOpen((open) => !open);
+    if (!pairingOpen) { refreshDevices(); if (!offer) startPairing(); }
+  };
 
   // Entrance animations must not stay on forever — re-renders during drag were
   // restarting rail-icon keyframes and looking like a glitch from Other.
@@ -206,10 +242,18 @@ export function Home() {
     });
   };
 
+  const toggleWorkspace = (workspaceId: string) => {
+    setRecentWorkspaceIds((current) => [workspaceId, ...current.filter((id) => id !== workspaceId)]);
+    setRisingWorkspaceId(workspaceId);
+    if (riseTimer.current != null) window.clearTimeout(riseTimer.current);
+    riseTimer.current = window.setTimeout(() => setRisingWorkspaceId(null), 650);
+    setExpandedId((current) => (current === workspaceId ? null : workspaceId));
+  };
+
   const toggleCard = (workspaceId: string) => (event: MouseEvent) => {
     if ((event.target as HTMLElement).closest(".ws-name, .app-icon")) return;
     if (afterDragClick(event)) return;
-    setExpandedId((current) => (current === workspaceId ? null : workspaceId));
+    toggleWorkspace(workspaceId);
   };
 
   const commitRename = async (workspace: Workspace, next: string) => {
@@ -257,7 +301,7 @@ export function Home() {
         </div>
         <div className="rail-divider" />
         <div className="rail-section rail-saved">
-          {directory.cards.map((card) => (
+          {orderedCards.map((card) => (
             <button
               key={card.workspace.id}
               className={`group-tile${dropTarget === card.workspace.id ? " is-drop" : ""}${expandedId === card.workspace.id ? " is-selected" : ""}`}
@@ -265,9 +309,7 @@ export function Home() {
               title={card.workspace.name.toLowerCase()}
               onClick={(event) => {
                 if (afterDragClick(event)) return;
-                setExpandedId((current) =>
-                  current === card.workspace.id ? null : card.workspace.id,
-                );
+                toggleWorkspace(card.workspace.id);
               }}
               {...bindDrop(card.workspace.id)}
             >
@@ -308,12 +350,15 @@ export function Home() {
               {correctionNote}
             </p>
           ) : null}
+          <button type="button" className="organize-btn pairing-btn" onClick={togglePairing}>pair phone</button>
         </div>
-        {directory.cards.map((card) => (
+        {pairingOpen ? <PairingPanel offer={offer} devices={devices} message={pairingMessage} onNewCode={startPairing} onRevoke={async (id) => { if (await revokeDevice(id)) refreshDevices(); }} /> : null}
+        {orderedCards.map((card) => (
           <WorkspaceCardView
             key={card.workspace.id}
             card={card}
             expanded={expandedId === card.workspace.id}
+            isRising={risingWorkspaceId === card.workspace.id}
             dropTarget={dropTarget}
             draggingId={draggingId}
             bindDrop={bindDrop}
@@ -330,9 +375,18 @@ export function Home() {
   );
 }
 
+function PairingPanel({ offer, devices, message, onNewCode, onRevoke }: { offer: { code: string; expiresAt: string; qrUrl: string } | null; devices: Device[]; message: string; onNewCode: () => void; onRevoke: (id: string) => void }) {
+  const phones = devices.filter((device) => device.kind === "mobile" && !device.revokedAt);
+  return <section className="pairing-panel">
+    <div><p className="pairing-title">pair your phone</p>{offer ? <><code className="pairing-code">{offer.code}</code><p className="pairing-copy">Enter this code at the companion, or open <a href={offer.qrUrl} target="_blank" rel="noreferrer">this pairing link</a>. Expires {new Date(offer.expiresAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.</p></> : <p className="pairing-copy">Creating a short-lived code…</p>}{message ? <p className="pairing-copy">{message}</p> : null}<button type="button" className="btn" onClick={onNewCode}>new code</button></div>
+    <div><p className="pairing-title">paired phones</p>{phones.length ? phones.map((device) => <div className="paired-device" key={device.id}><span>{device.label || "Mobile companion"}</span><button className="btn" type="button" onClick={() => onRevoke(device.id)}>revoke</button></div>) : <p className="pairing-copy">No phones paired yet.</p>}</div>
+  </section>;
+}
+
 function WorkspaceCardView({
   card,
   expanded,
+  isRising,
   dropTarget,
   draggingId,
   bindDrop,
@@ -345,6 +399,7 @@ function WorkspaceCardView({
 }: {
   card: HomeDirectory["cards"][number];
   expanded: boolean;
+  isRising: boolean;
   dropTarget: string | null;
   draggingId: string | null;
   bindDrop: (target: string) => {
@@ -362,7 +417,7 @@ function WorkspaceCardView({
 
   return (
     <article
-      className={`card${expanded ? " is-open" : ""}${dropTarget === card.workspace.id ? " is-drop" : ""}`}
+      className={`card${expanded ? " is-open" : ""}${isRising ? " is-rising" : ""}${dropTarget === card.workspace.id ? " is-drop" : ""}`}
       data-id={card.workspace.id}
       {...bindDrop(card.workspace.id)}
     >
@@ -382,7 +437,7 @@ function WorkspaceCardView({
               onDragEnd={onDragEnd}
               onClick={onOpenTab(tab)}
             >
-              <TabMark url={tab.url} title={tab.title} size={22} />
+              <TabMark url={tab.url} title={tab.title} size={16} />
             </span>
           ))}
         </div>

@@ -4,3 +4,4 @@ export * from "./ingest";
 export * from "./clustering";
 export * from "./chat";
 export * from "./agents";
+export * from "./pairing";

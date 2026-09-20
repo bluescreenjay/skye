@@ -432,18 +432,20 @@ Bounded tool loop on click (small max turns). Do not require MCP for the origina
 
 ### 014 — Mobile companion
 
-**What:** Phone as a remote interface to the same workspaces (Home-like list + chat).
+**What:** Phone as a remote interface to the same workspaces (Home-like list + chat), via a **mobile web app** paired with a short-lived QR/code. Light ElevenLabs voice on chat is a soft add-on.
 
 **In scope**
-- Mobile client listing workspaces + chat/plan/actions against the same API
-- Reuse ElevenLabs voice if 013 already exists
+- Separate mobile web companion (phone browser / add-to-home-screen)—not a native store app and not a Side Panel clone
+- Pair phone to the same person as desktop: desktop shows short-lived QR + one-time code → mobile redeems → durable per-device credential; revoke from desktop
+- Mobile client listing workspaces + chat/plan/agents against the same workspace state as desktop
+- Soft: hear chat replies (and optionally speak a question) via ElevenLabs-style voice; text remains source of truth; voice must not block pair/list/typed chat
 
-**Out of scope:** Recreating Chrome or the Side Panel on mobile
+**Out of scope:** Recreating Chrome or the Side Panel on mobile; controlling desktop tabs from the phone; full OAuth/email login (pairing is enough for this feature); voice-only product or replacing text UI
 
 **Depends on:** 001–011 (012–013 helpful)  
 **Specify prompt**
 ```text
-Add a mobile companion that is a remote interface to the same persistent workspaces—not a second browser and not a Side Panel clone. Users can list workspaces (Home-like), ask questions, review plans, and trigger actions. Reuse existing voice if present. Desktop Home, desktop sidebar, and mobile must share the same workspace state.
+Add a mobile companion as a separate mobile web app that is a remote interface to the same persistent workspaces—not a second browser and not a Side Panel clone. Pair the phone to the desktop person via a short-lived QR code or one-time code shown on desktop; redeeming it issues a durable per-device credential for the same person. Users can list workspaces (Home-like), ask questions, review plans and agent results, and trigger actions. Lightly include ElevenLabs voice for hearing chat replies and optional speak-to-ask on mobile—text stays the source of truth and voice must not block pairing or typed chat. Desktop Home, desktop sidebar, and mobile must share the same workspace state.
 ```
 
 ---

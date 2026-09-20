@@ -14,6 +14,7 @@ describe("manifest", () => {
   it("asks for the permissions the design needs", () => {
     expect([...(m.permissions as string[])].sort()).toEqual([
       "alarms",
+      "favicon",
       "geolocation",
       "scripting",
       "sidePanel",
