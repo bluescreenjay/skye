@@ -7,6 +7,7 @@ import { ConnectorError, type ConnectorResult, type ToolConnector } from "./conn
 import { integrationConfig, markRejected, connectionStatus } from "./config";
 import { BINDING_CACHE_MS, CONNECT_TIMEOUT_MS, SEARCH_ITEMS_MAX, SEARCH_SNIPPET_CHARS, TOOL_CALL_TIMEOUT_MS } from "../limits";
 import { googleAccessToken } from "./google-token";
+import { googleMcpFetch } from "./google-mcp-fetch";
 
 type BindingState = { names: Map<string, string>; checkedAt: number };
 
@@ -196,12 +197,17 @@ async function connectAndList(integration: IntegrationId, signal: AbortSignal): 
   if (cfg.transport.kind === "http") {
     const { StreamableHTTPClientTransport } = await import("@modelcontextprotocol/sdk/client/streamableHttp.js");
     const headers: Record<string, string> = {};
-    if (integration === "drive" || integration === "gmail" || integration === "calendar") headers.Authorization = `Bearer ${await googleAccessToken()}`;
+    const isGoogle = integration === "drive" || integration === "gmail" || integration === "calendar";
+    if (isGoogle) headers.Authorization = `Bearer ${await googleAccessToken()}`;
     else {
       const token = process.env[`MCP_${integration.toUpperCase()}_TOKEN`];
       if (token) headers.Authorization = `Bearer ${token}`;
     }
-    transport = new StreamableHTTPClientTransport(new URL(cfg.transport.url), { requestInit: { headers } });
+    transport = new StreamableHTTPClientTransport(new URL(cfg.transport.url), {
+      requestInit: { headers },
+      // Google's hosted MCP returns tools/list as HTTP 403 with a valid JSON-RPC body; normalize for the SDK.
+      ...(isGoogle ? { fetch: googleMcpFetch } : {}),
+    });
   } else {
     const { StdioClientTransport } = await import("@modelcontextprotocol/sdk/client/stdio.js");
     // A minimal environment: PATH plus this server's own token. Never the server's whole environment.

@@ -196,3 +196,32 @@ describe("google token", () => {
     expect(calls).toBe(1);
   });
 });
+
+describe("googleMcpFetch", () => {
+  it("rewrites Google's 403 + successful JSON-RPC tools/list into 200", async () => {
+    const { googleMcpFetch } = await import("@/src/actions/integrations/google-mcp-fetch");
+    const body = JSON.stringify({ jsonrpc: "2.0", id: 1, result: { tools: [{ name: "create_file" }] } });
+    const original = globalThis.fetch;
+    globalThis.fetch = (async () => new Response(body, { status: 403, headers: { "content-type": "application/json" } })) as typeof fetch;
+    try {
+      const res = await googleMcpFetch("https://drivemcp.googleapis.com/mcp/v1", { method: "POST" });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual(JSON.parse(body));
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  it("leaves a real 403 JSON-RPC error alone", async () => {
+    const { googleMcpFetch } = await import("@/src/actions/integrations/google-mcp-fetch");
+    const body = JSON.stringify({ jsonrpc: "2.0", id: 1, error: { code: -32000, message: "denied" } });
+    const original = globalThis.fetch;
+    globalThis.fetch = (async () => new Response(body, { status: 403 })) as typeof fetch;
+    try {
+      const res = await googleMcpFetch("https://drivemcp.googleapis.com/mcp/v1");
+      expect(res.status).toBe(403);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+});
