@@ -1,5 +1,6 @@
-import type { TabRef } from "@ai-browser/shared";
+import type { NavTarget, TabRef } from "@ai-browser/shared";
 import { syncSidePanelForTab } from "../sidepanel-gate";
+import { sendSignal } from "../ui/command-signal";
 
 function openNewTab(url: string): void {
   try {
@@ -80,4 +81,30 @@ export async function openHomeTab(tab: TabRef): Promise<void> {
   } catch {
     openNewTab(tab.url);
   }
+}
+
+/**
+ * Bring Home forward (feature 011, the command bar): focus an existing Home tab or open one, then tell it
+ * what to show with a `navigate` signal (a Home tab that had to be created reads the signal when it loads).
+ * Unlike the sidebar's own home button this does NOT close the Side Panel. Never throws.
+ */
+export async function showHome(target: NavTarget): Promise<void> {
+  const url = chrome.runtime.getURL("home.html");
+  try {
+    const existing = await chrome.tabs.query({ url });
+    const tab = existing.find((item) => typeof item.id === "number");
+    if (tab?.id != null) {
+      if (typeof tab.windowId === "number") await chrome.windows.update(tab.windowId, { focused: true });
+      await chrome.tabs.update(tab.id, { active: true });
+    } else {
+      await chrome.tabs.create({ url });
+    }
+  } catch {
+    try {
+      await chrome.tabs.create({ url });
+    } catch {
+      // Nothing more to try; the signal below is still harmless.
+    }
+  }
+  await sendSignal({ kind: "navigate", target });
 }

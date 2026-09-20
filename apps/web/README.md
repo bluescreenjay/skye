@@ -46,6 +46,7 @@ Pairing and workspace curls: `specs/003-workspace-persistence-api/quickstart.md`
 | `GET /api/devices`, `POST /api/devices/:id/revoke` | List a person's device credentials and revoke one immediately (feature 014) |
 | `GET /api/workspaces/:id/agents`, `POST /api/workspaces/:id/agents/:agentId/run` | Read a workspace's agents card in one call (no AI request); press an agent, which returns `202` at once with a running run (feature 010) |
 | `GET /api/workspaces/:id/agents/:agentId/runs`, `PATCH /api/workspaces/:id/plan-items/:itemId` | An agent's earlier runs, newest first; tick or untick a "next steps" checklist item (feature 010) |
+| `POST /api/command`, `POST /api/command/apply`, `GET /api/command/undo` | Interpret a natural-language command; apply (or preview) a change; read the undo window (feature 011) |
 
 ## Tests
 
@@ -166,4 +167,28 @@ Connection variables are listed in the repo-root `.env.example` (`MCP_*`, `GITHU
 `ACTIONS_LIVE=1` runs one suggestion pass and one composed local run against the real provider on fixture tabs. `ACTIONS_LIVE_GITHUB=1` (and `JIRA`, `NOTION`, `SLACK`, `GOOGLE`, which covers Drive, Gmail, and Calendar) connects and calls `tools/list` only — it never writes and never reads mail.
 
 A scratch-copy `next build --webpack` (a temp tree, never the running `apps/web/.next`) compiled with `serverExternalPackages: ["@modelcontextprotocol/sdk"]`. The seven action routes registered as dynamic. Leave that package external; the SDK is not bundled.
+
+## Command bar (feature 011)
+
+One shortcut and one box (Home and the Side Panel) turn a short sentence into organize, create, group, move, rename, merge, clean up, show, find, recall, undo, or a 010 agent press. The server interprets once per submit (`purpose: "command"`, 60 of the daily 450-request share), never writes on interpret, and applies only after a confirmed preview where the rules require it. Design: `specs/011-global-command-bar/`.
+
+| Route | Purpose |
+| --- | --- |
+| `POST /api/command` | Interpret the typed text (exactly one model call; nothing changes) |
+| `POST /api/command/apply` | Preview or apply a change; `undo` reverts the last one within 10 minutes |
+| `GET /api/command/undo` | Whether Undo is still available (no AI) |
+
+- **Model.** `LLM_MODEL_COMMAND` selects the command model (defaults with the other structured purposes). No new environment variable is required beyond the usual provider keys.
+- **Migration.** One table, `command_undo`, from `packages/shared/sql/011_command.sql` (needs 001 first; safe to re-run):
+
+```bash
+node apps/web/scripts/apply-sql.mjs packages/shared/sql/011_command.sql
+```
+
+Automated tests use a fake interpreter (and 004/010 fakes for organize and agents). An opt-in live check (~75 requests; VT VPN for the default provider) runs against PGlite only:
+
+```bash
+COMMAND_LIVE=1 pnpm --filter @ai-browser/web test command-live --disable-console-intercept
+LLM_PROVIDER=gemini COMMAND_LIVE=1 pnpm --filter @ai-browser/web test command-live --disable-console-intercept
+```
 

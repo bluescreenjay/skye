@@ -1,0 +1,245 @@
+/* The command bar (feature 011). Every value is var(--token, fallback) so the same file works on Home and in
+   the Side Panel. Everything drawn here is text: no images, no links, no HTML from a reply. The layout is one
+   column and works at 360px wide (the panel). */
+
+.cmd-open {
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--accent-20, rgba(219, 91, 69, 0.2));
+  border-radius: var(--radius-sm, 8px);
+  background: var(--card, rgba(255, 255, 255, 0.88));
+  color: var(--accent, #db5b45);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  cursor: pointer;
+}
+
+.cmd-open:hover {
+  background: var(--accent-06, rgba(219, 91, 69, 0.06));
+}
+
+.cmd-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 10vh 12px 12px;
+  background: rgba(77, 98, 110, 0.28);
+  backdrop-filter: blur(3px);
+}
+
+.cmd {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(560px, 100%);
+  max-height: 80vh;
+  padding: 14px;
+  border-radius: var(--radius, 14px);
+  background: var(--card-open, rgba(255, 255, 255, 0.98));
+  box-shadow: 0 18px 50px rgba(77, 98, 110, 0.28);
+  color: var(--ink, #4d626e);
+  font-size: 13px;
+  font-weight: 300;
+  line-height: 1.45;
+}
+
+.cmd-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.cmd-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--accent-20, rgba(219, 91, 69, 0.2));
+  border-radius: var(--radius-sm, 8px);
+  background: var(--white, #fff);
+  color: var(--ink, #4d626e);
+  font-size: 15px;
+  font-weight: 300;
+  outline: none;
+}
+
+.cmd-input:focus {
+  border-color: var(--accent, #db5b45);
+}
+
+.cmd-input:disabled {
+  opacity: 0.6;
+}
+
+.cmd-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-40, rgba(77, 98, 110, 0.6));
+}
+
+.cmd-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.cmd-say,
+.cmd-understood,
+.cmd-question,
+.cmd-status {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.cmd-understood {
+  font-weight: 400;
+}
+
+.cmd-status {
+  color: var(--ink-40, rgba(77, 98, 110, 0.6));
+}
+
+.cmd-failed {
+  margin: 0;
+  color: var(--accent, #db5b45);
+  overflow-wrap: anywhere;
+}
+
+.cmd-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cmd-ex,
+.cmd-choice,
+.cmd-secondary,
+.cmd-undo {
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid var(--accent-20, rgba(219, 91, 69, 0.2));
+  border-radius: var(--radius-sm, 8px);
+  background: var(--white, #fff);
+  color: var(--ink, #4d626e);
+  font-size: 12px;
+  font-weight: 300;
+  letter-spacing: -0.01em;
+  text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.cmd-ex:hover,
+.cmd-choice:hover,
+.cmd-secondary:hover,
+.cmd-undo:hover {
+  background: var(--accent-06, rgba(219, 91, 69, 0.06));
+}
+
+.cmd-undo {
+  align-self: flex-start;
+  border-color: var(--accent, #db5b45);
+  color: var(--accent, #db5b45);
+}
+
+.cmd-primary {
+  min-height: 28px;
+  padding: 4px 14px;
+  border: 0;
+  border-radius: var(--radius-sm, 8px);
+  background: var(--accent, #db5b45);
+  color: var(--white, #fff);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  cursor: pointer;
+}
+
+.cmd-primary:disabled,
+.cmd-secondary:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.cmd-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cmd-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 8px 10px;
+  list-style: none;
+  border: 1px solid var(--accent-12, rgba(219, 91, 69, 0.12));
+  border-radius: var(--radius-sm, 8px);
+  background: var(--accent-06, rgba(219, 91, 69, 0.06));
+}
+
+.cmd-preview-title {
+  margin: 0;
+  font-weight: 400;
+}
+
+.cmd-preview li {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cmd-preview .cmd-move {
+  font-size: 12px;
+  color: var(--ink-40, rgba(77, 98, 110, 0.6));
+}
+
+.cmd-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-40, rgba(77, 98, 110, 0.6));
+}
+
+.cmd-result {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--accent-12, rgba(219, 91, 69, 0.12));
+  border-radius: var(--radius-sm, 8px);
+  background: var(--accent-06, rgba(219, 91, 69, 0.06));
+}
+
+/* Inline (Home): the text box is Home's URL bar and the bar's answer drops down under it. */
+.cmd-inline {
+  position: relative;
+  min-width: 0;
+}
+
+.cmd-drop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 70vh;
+  padding: 14px;
+  border-radius: var(--radius, 14px);
+  background: var(--card-open, rgba(255, 255, 255, 0.98));
+  box-shadow: 0 18px 50px rgba(77, 98, 110, 0.28);
+  color: var(--ink, #4d626e);
+  font-size: 13px;
+  font-weight: 300;
+  line-height: 1.45;
+}

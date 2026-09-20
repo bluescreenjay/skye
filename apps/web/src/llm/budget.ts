@@ -12,9 +12,9 @@ export type Purpose = "cluster" | "chat" | "actions" | "command" | "suggest";
 /** Each purpose's own share of a day. Beyond it, a purpose draws on the shared spill-over pool. */
 export const SHARES: Record<Purpose, number> = {
   cluster: 50,
-  chat: 170,
-  actions: 120, // feature 010: the share of the cut plan feature moved here
-  command: 20, // 40 of the unused 011 share moved to suggest (010b). Revisit command when 011 is planned.
+  chat: 150, // feature 011: 20 moved to command
+  actions: 100, // feature 011: 20 moved to command
+  command: 60, // feature 011: one request per submitted command; the live check needs dozens
   suggest: 40,
 };
 

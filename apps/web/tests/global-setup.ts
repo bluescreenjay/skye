@@ -10,6 +10,7 @@ const SCHEMAS = [
   "008_chat.sql",
   "010_agents.sql",
   "010b_actions.sql",
+  "011_command.sql",
   "014_mobile_devices.sql",
 ].map((file) =>
   fileURLToPath(new URL(`../../../packages/shared/sql/${file}`, import.meta.url)),
@@ -27,10 +28,10 @@ function freePort(): Promise<number> {
 }
 
 /**
- * Starts a throwaway Postgres with the real 001, 004, 008, 010, and 010b schemas and points the app at it.
+ * Starts a throwaway Postgres with the real 001, 004, 008, 010, 010b, and 011 schemas and points the app at it.
  * DATABASE_URL is set explicitly, and src/db.ts never overrides a variable that is
  * already set, so these tests cannot reach a real database or read one from .env.
- * The same goes for the AI keys (VT and Gemini): they are blanked unless CLUSTER_LIVE=1, CHAT_LIVE=1, AGENTS_LIVE=1, or ACTIONS_LIVE=1,
+ * The same goes for the AI keys (VT and Gemini): they are blanked unless CLUSTER_LIVE=1, CHAT_LIVE=1, AGENTS_LIVE=1, ACTIONS_LIVE=1, or COMMAND_LIVE=1,
  * so no test can call a real model (and use shared quota) by accident.
  */
 export default async function setup() {
@@ -46,7 +47,8 @@ export default async function setup() {
     process.env.CLUSTER_LIVE !== "1" &&
     process.env.CHAT_LIVE !== "1" &&
     process.env.AGENTS_LIVE !== "1" &&
-    process.env.ACTIONS_LIVE !== "1"
+    process.env.ACTIONS_LIVE !== "1" &&
+    process.env.COMMAND_LIVE !== "1"
   ) {
     for (const name of ["VT_LLM_API_KEY", "LLM_API_KEY", "GEMINI_API_KEY"]) process.env[name] = "";
   }

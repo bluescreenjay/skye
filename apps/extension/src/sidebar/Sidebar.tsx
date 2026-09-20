@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Workspace } from "@ai-browser/shared";
 import { loadConfig } from "../config";
 import {
@@ -9,10 +9,12 @@ import {
   putTabMembership,
 } from "./corrections-api";
 import { focusOrOpenSavedTab } from "../home/navigation";
+import { createCommandHost } from "../home/command-host";
+import { CommandBar, CommandBarBoundary, CommandBarButton, useCommandBar } from "../ui/CommandBar";
 import { TabRow } from "../ui/TabRow";
 import { ToolPlaceholders } from "./ToolPlaceholders";
 import { fetchPanelView } from "./api";
-import { createSidebarContext, getPanelWindowId } from "./context";
+import { createSidebarContext, getPanelWindowId, readActivePage } from "./context";
 import { openHomeAndClosePanel } from "./navigation";
 import type { PanelView } from "./state";
 
@@ -51,6 +53,52 @@ function activeUrl(view: PanelView): string {
   return "";
 }
 
+/**
+ * The command bar in the Side Panel (feature 011): the place the product uses for in-page work. It lives
+ * in its own component, inside an error boundary, so nothing it does can break the panel. It reads the
+ * active page and this window's tabs when a command is submitted, and reloads the panel after a change.
+ */
+function SidebarCommandBar({ refresh }: { refresh: () => void }) {
+  const config = useMemo(() => {
+    const result = loadConfig(import.meta.env);
+    return result.ok ? result.config : null;
+  }, []);
+  const host = useMemo(
+    () =>
+      createCommandHost({
+        surface: "page",
+        getContext: async () => {
+          const windowId = await getPanelWindowId();
+          const selection = windowId === null ? null : await readActivePage(windowId);
+          const tabs = windowId === null ? [] : await chrome.tabs.query({ windowId });
+          return {
+            surface: "page" as const,
+            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            expandedWorkspaceIds: [],
+            activeTab: selection?.kind === "eligible" ? { chromeTabId: selection.page.tabId, url: selection.page.url } : null,
+            windowTabIds: tabs.map((tab) => tab.id).filter((id): id is number => typeof id === "number"),
+          };
+        },
+        refresh,
+      }),
+    [refresh],
+  );
+  const bar = useCommandBar({
+    host,
+    config,
+    // The shortcut was pressed on the page this panel is showing (its window's active tab).
+    acceptsOpen: async (tabId) => {
+      if (tabId === "new") return false;
+      const windowId = await getPanelWindowId();
+      if (windowId === null) return false;
+      const selection = await readActivePage(windowId);
+      return selection.kind === "eligible" && selection.page.tabId === tabId;
+    },
+    onChanged: refresh,
+  });
+  return <CommandBar bar={bar} />;
+}
+
 export function Sidebar() {
   const [view, setView] = useState<PanelView>(initialView);
   const [destinations, setDestinations] = useState<Workspace[]>([]);
@@ -58,6 +106,7 @@ export function Sidebar() {
   const [moving, setMoving] = useState(false);
   const [suggestionId, setSuggestionId] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const reload = useCallback(() => setReloadKey((value) => value + 1), []);
 
   useEffect(() => {
     let active = true;
@@ -180,6 +229,9 @@ export function Sidebar() {
           home
         </button>
         <p className="wordmark wordmark-panel">skye</p>
+        <CommandBarBoundary>
+          <CommandBarButton className="home-btn" />
+        </CommandBarBoundary>
       </div>
 
       <h1 className="panel-workspace">{title}</h1>
@@ -262,6 +314,9 @@ export function Sidebar() {
       )}
 
       <ToolPlaceholders />
+      <CommandBarBoundary>
+        <SidebarCommandBar refresh={reload} />
+      </CommandBarBoundary>
     </aside>
   );
 }

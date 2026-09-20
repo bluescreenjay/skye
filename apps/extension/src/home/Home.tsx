@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type DragEvent, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent } from "react";
 import type { TabRef, Workspace } from "@ai-browser/shared";
 import { TabMark } from "../ui/TabMark";
 import { AgentsColumn } from "../ui/AgentsColumn";
@@ -6,6 +6,9 @@ import { ActionsGroup } from "../ui/ActionsGroup";
 import { executeActionIntents } from "./action-intents";
 import { matchesAddress } from "../ui/agents";
 import { TabRow } from "../ui/TabRow";
+import { CommandBar, CommandBarBoundary, useCommandBar } from "../ui/CommandBar";
+import { loadConfig } from "../config";
+import { createCommandHost } from "./command-host";
 import { loadDirectory, archiveWorkspace, moveTab, renameWorkspace, runCluster } from "./api";
 import {
   composeDirectory,
@@ -39,6 +42,53 @@ function workHint(cards: HomeDirectory["cards"]): string {
 
 function greetingText(weather: string, cards: HomeDirectory["cards"]): string {
   return `hi. it's ${formatTime()} and the weather where you are is ${weather}. some trends in your browsing tabs are ${workHint(cards)}. what will you get done today?`;
+}
+
+/**
+ * The command bar on Home (feature 011): the URL bar at the top, with the answer dropping down under it. It lives in its own component, inside an error
+ * boundary, so nothing it does can break the directory. It reads which card is expanded when a command is
+ * submitted, reloads the directory after a change, and expands the card a command asks to show.
+ */
+function HomeCommandBar({ expandedId, refresh, expand }: { expandedId: string | null; refresh: () => Promise<void>; expand: (workspaceId: string) => void }) {
+  const config = useMemo(() => {
+    const result = loadConfig(import.meta.env);
+    return result.ok ? result.config : null;
+  }, []);
+  const expanded = useRef(expandedId);
+  expanded.current = expandedId;
+  const host = useMemo(
+    () =>
+      createCommandHost({
+        surface: "home",
+        getContext: async () => ({
+          surface: "home",
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          expandedWorkspaceIds: expanded.current ? [expanded.current] : [],
+          activeTab: null,
+          windowTabIds: [],
+        }),
+        refresh: () => void refresh(),
+      }),
+    [refresh],
+  );
+  const bar = useCommandBar({
+    host,
+    config,
+    // The shortcut was pressed on this tab, or on a page that has no bar and opened a new Home (only a visible Home takes that).
+    acceptsOpen: async (tabId) => {
+      if (tabId === "new") return document.visibilityState === "visible";
+      try {
+        return (await chrome.tabs.getCurrent())?.id === tabId;
+      } catch {
+        return false;
+      }
+    },
+    onChanged: () => void refresh(),
+    onNavigate: (target) => {
+      if (target.kind === "workspace") expand(target.workspaceId);
+    },
+  });
+  return <CommandBar bar={bar} variant="inline" inputClassName="url-bar" />;
 }
 
 export function Home() {
@@ -377,7 +427,9 @@ export function Home() {
       <main className="home">
         <div className="home-top">
           <p className="wordmark">skye</p>
-          <input className="url-bar" type="text" placeholder="url bar" spellCheck={false} autoComplete="off" />
+          <CommandBarBoundary>
+            <HomeCommandBar expandedId={expandedId} refresh={refresh} expand={setExpandedId} />
+          </CommandBarBoundary>
           <p className="greeting">{greetingText(weather, directory.cards)}</p>
         </div>
         <div className="organize-row">

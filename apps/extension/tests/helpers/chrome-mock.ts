@@ -12,6 +12,8 @@ export interface MockTab {
   incognito?: boolean;
   discarded?: boolean;
   status?: "loading" | "complete";
+  pinned?: boolean;
+  index?: number;
 }
 
 export interface ChromeMock {
@@ -29,6 +31,23 @@ export interface ChromeMock {
   scriptCalls: number[];
   badge: { text: string; color: string | undefined };
   alarms: Map<string, { periodInMinutes?: number; delayInMinutes?: number }>;
+  /** Backing data for chrome.storage.session (feature 011 signals). */
+  session: Map<string, unknown>;
+  /**
+   * Every call to the APIs the command bar uses, in the order they were made, so a test can prove that
+   * `sidePanel.open` ran BEFORE any awaited call (Chrome accepts a shortcut as the user gesture only then).
+   */
+  calls: string[];
+  /** Arguments of chrome.sidePanel.open, in order. */
+  sidePanelOpens: Array<{ tabId?: number; windowId?: number }>;
+  /** When true, chrome.sidePanel.open rejects. */
+  sidePanelRejects: boolean;
+  /** Tab ids passed to chrome.tabs.remove, in order (each call is one entry). */
+  removedTabs: number[][];
+  /** Arguments of chrome.tabs.create. */
+  createdTabs: Array<{ url?: string }>;
+  /** Fires the registered chrome.commands.onCommand listeners; returns whatever they returned. */
+  fireCommand(command: string, tab?: unknown): unknown[];
 }
 
 const clone = <T>(value: T): T => structuredClone(value);
@@ -43,6 +62,20 @@ export function installChromeMock(): ChromeMock {
     scriptCalls: [],
     badge: { text: "", color: undefined },
     alarms: new Map(),
+    session: new Map(),
+    calls: [],
+    sidePanelOpens: [],
+    sidePanelRejects: false,
+    removedTabs: [],
+    createdTabs: [],
+    fireCommand: (command, tab) => commandListeners.map((listener) => listener(command, tab)),
+  };
+
+  type ChangeListener = (changes: Record<string, { oldValue?: unknown; newValue?: unknown }>, areaName: string) => void;
+  const changeListeners: ChangeListener[] = [];
+  const commandListeners: Array<(command: string, tab?: unknown) => unknown> = [];
+  const notify = (areaName: string, key: string, oldValue: unknown, newValue: unknown) => {
+    for (const listener of [...changeListeners]) listener({ [key]: { oldValue, newValue } }, areaName);
   };
 
   const storageLocal = {
@@ -73,6 +106,32 @@ export function installChromeMock(): ChromeMock {
     },
   };
 
+  const storageSession = {
+    async get(keys?: string | string[] | null) {
+      mock.calls.push("storage.session.get");
+      const out: Record<string, unknown> = {};
+      const list = keys == null ? [...mock.session.keys()] : typeof keys === "string" ? [keys] : keys;
+      for (const k of list) if (mock.session.has(k)) out[k] = clone(mock.session.get(k));
+      return out;
+    },
+    async set(items: Record<string, unknown>) {
+      mock.calls.push("storage.session.set");
+      for (const [k, v] of Object.entries(items)) {
+        const old = mock.session.get(k);
+        mock.session.set(k, clone(v));
+        notify("session", k, old, clone(v));
+      }
+    },
+    async remove(keys: string | string[]) {
+      mock.calls.push("storage.session.remove");
+      for (const k of typeof keys === "string" ? [keys] : keys) {
+        const old = mock.session.get(k);
+        mock.session.delete(k);
+        notify("session", k, old, undefined);
+      }
+    },
+  };
+
   const asTab = (t: MockTab) => ({
     active: false,
     incognito: false,
@@ -84,6 +143,7 @@ export function installChromeMock(): ChromeMock {
 
   const tabs = {
     async query(info: { active?: boolean; windowId?: number; lastFocusedWindow?: boolean } = {}) {
+      mock.calls.push("tabs.query");
       return mock.tabs
         .filter((t) => info.active === undefined || Boolean(t.active) === info.active)
         .filter((t) => info.windowId === undefined || t.windowId === info.windowId)
@@ -91,9 +151,41 @@ export function installChromeMock(): ChromeMock {
         .map(asTab);
     },
     async get(id: number) {
+      mock.calls.push("tabs.get");
       const tab = mock.tabs.find((t) => t.id === id);
       if (!tab) throw new Error(`No tab with id: ${id}.`);
       return asTab(tab);
+    },
+    async remove(ids: number | number[]) {
+      mock.calls.push("tabs.remove");
+      const list = typeof ids === "number" ? [ids] : ids;
+      mock.removedTabs.push(list);
+      mock.tabs = mock.tabs.filter((t) => !list.includes(t.id));
+    },
+    async create(props: { url?: string }) {
+      mock.calls.push("tabs.create");
+      mock.createdTabs.push(props);
+      return { id: 9000 + mock.createdTabs.length, windowId: 1, ...props };
+    },
+  };
+
+  const sidePanel = {
+    open(options: { tabId?: number; windowId?: number }) {
+      mock.calls.push("sidePanel.open");
+      mock.sidePanelOpens.push(options);
+      return mock.sidePanelRejects ? Promise.reject(new Error("sidePanel.open() may only be called in response to a user gesture.")) : Promise.resolve();
+    },
+  };
+
+  const commands = {
+    onCommand: {
+      addListener(listener: (command: string, tab?: unknown) => unknown) {
+        commandListeners.push(listener);
+      },
+      removeListener(listener: (command: string, tab?: unknown) => unknown) {
+        const i = commandListeners.indexOf(listener);
+        if (i >= 0) commandListeners.splice(i, 1);
+      },
     },
   };
 
@@ -142,7 +234,20 @@ export function installChromeMock(): ChromeMock {
   };
 
   (globalThis as Record<string, unknown>).chrome = {
-    storage: { local: storageLocal },
+    storage: {
+      local: storageLocal,
+      session: storageSession,
+      onChanged: {
+        addListener: (listener: ChangeListener) => changeListeners.push(listener),
+        removeListener: (listener: ChangeListener) => {
+          const i = changeListeners.indexOf(listener);
+          if (i >= 0) changeListeners.splice(i, 1);
+        },
+      },
+    },
+    sidePanel,
+    commands,
+    runtime: { id: "test-extension-id", getURL: (path: string) => `chrome-extension://test-extension-id/${path}` },
     tabs,
     windows,
     scripting,
