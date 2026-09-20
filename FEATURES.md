@@ -365,7 +365,7 @@ Add desktop workspace voice using ElevenLabs in the Chrome sidebar. Users should
 
 ### 010b — MCP + local action tools
 
-**What:** Real executable tools behind workspace agents and (later) chat/command bar: a small MCP client for GitHub, Notion, Slack, Jira, and Google Drive, plus first-party local/browser tools that need no third-party account. VT ARC (or Gemini) stays the LLM; this feature adds the tool layer, not a new model vendor. The full catalog lives on the server; the UI does **not** dump every tool as a permanent button. A suggestion agent reads workspace context (tabs, summary, plan, credentials available) and proposes a small set of the best next actions; the product **dynamically renders buttons** for those suggestions (label, tool id, prefilled args). The user still confirms by clicking—tools do not run silently.
+**What:** Real executable tools behind workspace agents and (later) chat/command bar: a small MCP client for GitHub, Notion, Slack, Jira, Google Drive, and Gmail, plus first-party local/browser tools that need no third-party account. VT ARC (or Gemini) stays the LLM; this feature adds the tool layer, not a new model vendor. The full catalog lives on the server; the UI does **not** dump every tool as a permanent button. A suggestion agent reads workspace context (tabs, summary, plan, credentials available) and proposes a small set of the best next actions; the product **dynamically renders buttons** for those suggestions (label, tool id, prefilled args). The user still confirms by clicking—tools do not run silently.
 
 **Priority:** Stretch — start only after **010** ships. Does not gate the MVP cut line.
 
@@ -397,24 +397,25 @@ Add desktop workspace voice using ElevenLabs in the Chrome sidebar. Users should
 | **Slack** | `slack_post_message`, `slack_upload_snippet` | Bot token; post to a configured channel (or channel arg if allowed) |
 | **Jira** | `jira_create_issue`, `jira_search`, `jira_add_comment` | Site URL + API token; project key configurable |
 | **Google Drive** | `drive_upload_markdown`, `drive_create_doc_from_summary`, `drive_get_share_link` | OAuth; upload summary/PDF or create a Doc from workspace summary |
+| **Gmail** | `gmail_create_draft`, `gmail_send_message`, `gmail_search_messages` | OAuth; act only on the person's own mailbox. Default suggestion is a **draft**; sending shows the exact recipient, subject, and body and needs a separate confirm. Search returns sender, subject, date, and a short excerpt only |
 
 **In scope**
 - A server-side tool registry: each tool has id, description, JSON input schema, executor, and whether it is `local` or `mcp:<server>`
-- An MCP client module that connects to the five configured servers (stdio and/or HTTP/SSE as each server requires), lists tools, maps them into OpenAI-compatible `tools` for VT ARC / Gemini, executes `tool_calls`, and records results on `ActionRun`
+- An MCP client module that connects to the six configured servers (stdio and/or HTTP/SSE as each server requires), lists tools, maps them into OpenAI-compatible `tools` for VT ARC / Gemini, executes `tool_calls`, and records results on `ActionRun`
 - **Dynamic action suggestions:** a user-triggered (or workspace-open / refresh) suggestion pass where the model sees the registry (ids + short descriptions + which integrations are connected) and workspace context, then returns a small ranked list of suggested actions (e.g. 3–6). Each suggestion has a human label, tool id, optional prefilled args, and short rationale. Home (and later sidebar) **renders only those as buttons**—not the full catalog. Suggestions refresh when workspace context changes materially or the user asks to refresh; omit tools whose credentials are missing
 - Clicking a suggested button runs that tool (or a short bounded tool loop, small max turns) and stores an `ActionRun`; the UI may refresh suggestions after a successful run
-- Credential wiring via env / per-user secrets for the five SaaS integrations; missing credentials → tool excluded from suggestions (and a clear “connect X” if the user somehow invokes it), not a crash
+- Credential wiring via env / per-user secrets for the six SaaS integrations; missing credentials → tool excluded from suggestions (and a clear “connect X” if the user somehow invokes it), not a crash
 - Local tools that the extension must perform (`open_related_tabs`, `open_google_searches`, downloads): server returns an action intent; extension executes and reports success/failure
 - Home (and later sidebar) shows external URL/id in the run result for SaaS writes (e.g. Notion page, GitHub issue)
 - Fake/stub MCP, suggestion, and local executors in tests so CI never needs live GitHub/Notion/etc.
 - Implement **every** tool in the catalog above on the server (local table + MCP minimum set); dynamic UI is how they are *presented*, not how many are *built*
 
-**Out of scope:** showing the entire tool catalog as a permanent button grid; computer-use / mouse agents; arbitrary user-added MCP servers in the UI; Pinterest, Spotify, Figma, Miro, Gmail (unless a leftover hour after the five); filesystem MCP on a remote host; replacing VT ARC; unbounded autonomous agents that run tools without a click; making MCP required for 010’s five one-shot agents
+**Out of scope:** showing the entire tool catalog as a permanent button grid; computer-use / mouse agents; arbitrary user-added MCP servers in the UI; Pinterest, Spotify, Figma, Miro (Gmail was moved into scope); filesystem MCP on a remote host; replacing VT ARC; unbounded autonomous agents that run tools without a click; making MCP required for 010’s five one-shot agents
 
 **Depends on:** 010 (agent UI + ActionRun + safe page fetch), 008 (shared LLM), 002/003 (tabs + persistence); extension hooks for open-tab / download intents  
 **Unblocks:** richer demo actions on Home/sidebar; optional ⌘K (011) shortcuts into the same tool registry **after** both 010b and 011 exist — does not change 011’s MVP depends (010 only)
 
-**Done when:** On an expanded Home card, the product shows a short, context-specific set of action buttons (not the full catalog). Those buttons can (1) write/export a summary (md + PDF), (2) open related tabs and Google searches in Chrome, and (3) with credentials configured, push or create something real in each of GitHub, Notion, Slack, Jira, and Drive when suggested—each run saved and visible after reload. Changing workspace context (or refresh) changes which buttons appear. All catalog tools exist behind the registry and are covered by fake-executor tests.
+**Done when:** On an expanded Home card, the product shows a short, context-specific set of action buttons (not the full catalog). Those buttons can (1) write/export a summary (md + PDF), (2) open related tabs and Google searches in Chrome, and (3) with credentials configured, push or create something real in each of GitHub, Notion, Slack, Jira, Drive, and Gmail (a draft; a send only after the person confirms the exact message) when suggested—each run saved and visible after reload. Changing workspace context (or refresh) changes which buttons appear. All catalog tools exist behind the registry and are covered by fake-executor tests.
 
 **Specify prompt**
 ```text
@@ -424,7 +425,7 @@ Build a server-side tool registry and MCP client with the full catalog below. Th
 
 Local / first-party tools (no third-party account): list_workspace_tabs, read_public_pages (reuse 010 safe fetch), write_summary, export_summary_markdown, export_summary_pdf, open_related_tabs, open_google_searches, save_search_queries, append_plan_items, save_refs, copy_text, compose_share_link. Tab-opening and file download that must happen in Chrome are returned as intents for the extension to execute.
 
-MCP-backed tools for five integrations — implement at least: GitHub (create_issue, create_gist, search, comment_on_issue); Notion (create_page, append_blocks, search); Slack (post_message, upload_snippet); Jira (create_issue, search, add_comment); Google Drive (upload_markdown, create_doc_from_summary, get_share_link). Credentials from env or per-user secrets; missing auth fails clearly and keeps those tools out of suggestions.
+MCP-backed tools for six integrations — implement at least: GitHub (create_issue, create_gist, search, comment_on_issue); Notion (create_page, append_blocks, search); Slack (post_message, upload_snippet); Jira (create_issue, search, add_comment); Google Drive (upload_markdown, create_doc_from_summary, get_share_link); Gmail (create_draft, send_message, search_messages — sending needs a separate confirm of the exact message). Credentials from env or per-user secrets; missing auth fails clearly and keeps those tools out of suggestions.
 
 Bounded tool loop on click (small max turns). Do not require MCP for the original 010 one-shot agents. No computer-use, no always-on full catalog UI, no arbitrary user-installed MCP servers, no swap of VT ARC, no silent tool execution without a click. Fully testable with fake MCP/suggestion/local executors. Home shows external result links/ids on successful SaaS tools.
 ```

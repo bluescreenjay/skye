@@ -750,7 +750,7 @@ describe("US4: a workspace and a person stay separate", () => {
       const lines = call.prompt.slice(at0 + DATA_MARKER.length + 1).split("\n");
       expect(lines, call.agentId).toHaveLength(1); // everything untrusted is on the one JSON line
       const data = JSON.parse(lines[0]);
-      expect(Object.keys(data).sort()).toEqual(["chat", "plan", "tabs", "workspace"]); // no extra key was injected
+      expect(Object.keys(data).sort()).toEqual(["chat", "plan", "refs", "savedQueries", "summary", "tabs", "workspace"]);
       const texts = data.tabs.map((t: { text: string }) => t.text);
       for (const text of HOSTILE) {
         expect(texts, "page text").toContain(text);
@@ -851,7 +851,7 @@ describe("US5: when the AI can't do it, the person is told and loses nothing", (
     expect((await pressAgent(ALICE, ws.id, "summarize")).status).toBe(202); // and it can run again once finished
   });
 
-  it("refuses a fourth simultaneous run for one person, across workspaces, and not for another person", async () => {
+  it("refuses a sixth simultaneous run for one person, across workspaces, and not for another person", async () => {
     const hold = gate();
     const fake = installFakeAgentModel(async (input: AgentModelInput) => {
       await hold.wait;
@@ -863,19 +863,18 @@ describe("US5: when the AI can't do it, the person is told and loses nothing", (
     const bobs = await makeWorkspace(BOB, "Bob's");
     await putTabsIn(BOB, bobs.id, [{ url: "https://bob.example/a", title: "Bob A" }]);
 
-    for (const agentId of ["summarize", "compare", "missing"]) expect((await pressAgent(ALICE, ws.id, agentId)).status).toBe(202);
-    const fourth = await pressAgent(ALICE, ws.id, "refs");
-    expect([fourth.status, fourth.json]).toEqual([429, { error: "Several agents are already running. Wait for one to finish.", code: "too_many_runs" }]);
-    expect((await pressAgent(ALICE, other.id, "summarize")).status).toBe(429); // the limit is per person, not per workspace
-    expect(await runRows(ws.id)).toHaveLength(3);
+    for (const agentId of ["summarize", "compare", "missing", "refs", "next-steps"]) expect((await pressAgent(ALICE, ws.id, agentId)).status).toBe(202);
+    const sixth = await pressAgent(ALICE, other.id, "summarize");
+    expect([sixth.status, sixth.json]).toEqual([429, { error: "Several agents are already running. Wait for one to finish.", code: "too_many_runs" }]);
+    expect(await runRows(ws.id)).toHaveLength(5);
     expect(await runRows(other.id)).toEqual([]);
     expect((await pressAgent(BOB, bobs.id, "summarize")).status).toBe(202); // another person is not affected
 
     hold.release();
     await idle();
-    expect((await pressAgent(ALICE, ws.id, "refs")).status).toBe(202); // places are free again
+    expect((await pressAgent(ALICE, other.id, "summarize")).status).toBe(202); // places are free again
     await idle();
-    expect(fake.calls).toHaveLength(3 + 1 + 1); // Alice's three, Bob's one, and the run after they finished
+    expect(fake.calls).toHaveLength(5 + 1 + 1); // Alice's five, Bob's one, and the run after they finished
   });
 
   it("marks a run left pending for over 120 seconds as failed on a plain read, with nobody pressing anything", async () => {
@@ -1210,15 +1209,15 @@ describe("no AI request without a press (SC-007)", () => {
       await pressAgent(ALICE, ws.id, "summarize"), // 409: already running
       await pressAgent(ALICE, ws.id, "compare"), // accepted
       await pressAgent(ALICE, ws.id, "missing"), // accepted
-      await pressAgent(ALICE, ws.id, "refs"), // 429: three already running
+      await pressAgent(ALICE, ws.id, "refs"), // accepted (cap is 5)
     ];
-    expect(replies.map((r) => r.status)).toEqual([202, 409, 202, 202, 429]);
+    expect(replies.map((r) => r.status)).toEqual([202, 409, 202, 202, 202]);
     hold.release();
     await idle();
-    expect(fake.calls).toHaveLength(3);
+    expect(fake.calls).toHaveLength(4);
 
     await runMany(ws.id, "summarize", 2);
-    expect(fake.calls).toHaveLength(5); // two more presses, two more calls
+    expect(fake.calls).toHaveLength(6); // two more presses, two more calls
 
     async function runMany(workspaceId: string, agentId: string, times: number) {
       for (let i = 0; i < times; i += 1) await runAndWait(ALICE, workspaceId, agentId);

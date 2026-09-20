@@ -7,6 +7,7 @@ import { fitHistory } from "../chat/context";
 import { recentTurns } from "../chat/messages";
 import { listPlanItems } from "./plan-items";
 import { MAX_PLAN_ITEMS, MAX_TABS_LISTED, TAB_EXCERPT_CHARS, TAB_TITLE_CHARS, TAB_URL_CHARS } from "./limits";
+import { listQueries, listRefs, listSummary } from "../actions/notes";
 
 export interface GatheredTab {
   id: string;
@@ -27,6 +28,9 @@ export interface Gathered {
   tabs: GatheredTab[];
   plan: { text: string; done: boolean }[];
   chat: { role: "user" | "assistant"; content: string }[];
+  summary: { text: string } | null;
+  savedQueries: string[];
+  refs: { quote: string; url: string }[];
 }
 
 /** The address without its query string or fragment: they carry tokens, magic links, and one-time actions. */
@@ -78,6 +82,11 @@ export async function gatherMaterial(userId: string, workspace: Pick<DbWorkspace
   const chat = fitHistory(
     (await recentTurns(userId, workspace.id, 20)).map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
   );
+  const [summary, savedQueries, refs] = await Promise.all([
+    listSummary(userId, workspace.id),
+    listQueries(userId, workspace.id),
+    listRefs(userId, workspace.id),
+  ]);
 
   return {
     workspaceName: cut(workspace.name, 200),
@@ -85,5 +94,8 @@ export async function gatherMaterial(userId: string, workspace: Pick<DbWorkspace
     tabs: gathered,
     plan,
     chat,
+    summary: summary ? { text: cut(summary.text, 1_200) } : null,
+    savedQueries,
+    refs: refs.map((ref) => ({ quote: cut(ref.quote, 300), url: cut(ref.url, 200) })),
   };
 }

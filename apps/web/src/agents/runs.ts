@@ -4,10 +4,10 @@
 // reaped as stale can never be overwritten by a late job. Nothing here logs.
 import { randomUUID } from "crypto";
 import type { QueryResult, QueryResultRow } from "pg";
-import type { AgentEntry, AgentRunInput, AgentRunView } from "@ai-browser/shared";
+import type { AgentEntry, AgentRunView } from "@ai-browser/shared";
 import { query, withTransaction } from "../db";
 import { ACTION_RUN_COLUMNS, mapActionRun, type DbActionRun } from "../map";
-import { AGENTS } from "./catalog";
+import { AGENT_IDS, AGENTS } from "./catalog";
 import { invalidCursor, runInProgress, tooManyRuns, TIMED_OUT_MESSAGE } from "./errors";
 import { KEEP_RUNS, MAX_RUNNING_PER_USER, STALE_RUN_SECONDS } from "./limits";
 
@@ -35,7 +35,7 @@ export async function reapStale(db: Db, userId: string): Promise<void> {
  * this workspace is refused by a unique index. The count and the insert happen under one lock per
  * person, so presses that arrive together cannot both slip in under the limit.
  */
-export async function insertPendingRun(userId: string, workspaceId: string, agentId: string, input: AgentRunInput): Promise<AgentRunView> {
+export async function insertPendingRun(userId: string, workspaceId: string, agentId: string, input: object): Promise<AgentRunView> {
   await reapStale({ query }, userId);
   try {
     return await withTransaction(async (client) => {
@@ -75,7 +75,11 @@ export async function finishRunSucceeded(db: Db, runId: string, userId: string, 
 }
 
 /** Marks a run failed with a fixed sentence, only if it is still `pending`. Never throws. */
-export async function failRun(runId: string, userId: string, error: { code: string; message: string }): Promise<void> {
+export async function failRun(
+  runId: string,
+  userId: string,
+  error: { code: string; message: string; partial?: string | null },
+): Promise<void> {
   await query(
     `UPDATE action_runs SET status = 'failed', output = $3::jsonb
      WHERE id = $1::uuid AND user_id = $2::uuid AND status = 'pending'`,
@@ -88,9 +92,9 @@ export async function readEntries(userId: string, workspaceId: string): Promise<
   await reapStale({ query }, userId);
   const result = await query<DbActionRun>(
     `SELECT ${ACTION_RUN_COLUMNS} FROM action_runs
-     WHERE user_id = $1::uuid AND workspace_id = $2::uuid
+     WHERE user_id = $1::uuid AND workspace_id = $2::uuid AND action_id = ANY($3::text[])
      ORDER BY created_at DESC, id DESC LIMIT 60`,
-    [userId, workspaceId],
+    [userId, workspaceId, AGENT_IDS],
   );
   const runs = result.rows.map(mapActionRun); // newest first
   return AGENTS.map((agent) => {

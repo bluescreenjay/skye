@@ -7,14 +7,15 @@
 // restarts, which errs toward allowing more calls. It is a guardrail, not a guarantee.
 import { BudgetExceededError } from "./errors";
 
-export type Purpose = "cluster" | "chat" | "actions" | "command";
+export type Purpose = "cluster" | "chat" | "actions" | "command" | "suggest";
 
 /** Each purpose's own share of a day. Beyond it, a purpose draws on the shared spill-over pool. */
 export const SHARES: Record<Purpose, number> = {
   cluster: 50,
   chat: 170,
   actions: 120, // feature 010: the share of the cut plan feature moved here
-  command: 60,
+  command: 20, // 40 of the unused 011 share moved to suggest (010b). Revisit command when 011 is planned.
+  suggest: 40,
 };
 
 /** Requests any purpose may make after its own share, up to the global cap. */
@@ -31,7 +32,7 @@ type State = { day: string; counts: Record<Purpose, number> };
 const KEY = "__aiBrowserLlmBudget";
 type Holder = typeof globalThis & { [KEY]?: State };
 
-const emptyCounts = (): Record<Purpose, number> => ({ cluster: 0, chat: 0, actions: 0, command: 0 });
+const emptyCounts = (): Record<Purpose, number> => ({ cluster: 0, chat: 0, actions: 0, command: 0, suggest: 0 });
 
 function state(now: Date): State {
   const holder = globalThis as Holder;

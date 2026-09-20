@@ -37,6 +37,9 @@ export interface RunMaterial {
   tabs: PromptTab[];
   plan: { text: string; done: boolean }[];
   chat: { role: "user" | "assistant"; content: string }[];
+  summary?: { text: string } | null;
+  savedQueries?: string[];
+  refs?: { quote: string; url: string }[];
 }
 
 export function buildPrompt(agent: AgentDef, material: RunMaterial): string {
@@ -45,6 +48,9 @@ export function buildPrompt(agent: AgentDef, material: RunMaterial): string {
     tabs: material.tabs.map((t) => ({ id: t.id, title: t.title, url: t.url, read: t.read, text: t.text })),
     plan: material.plan,
     chat: material.chat,
+    summary: material.summary ?? null,
+    savedQueries: material.savedQueries ?? [],
+    refs: material.refs ?? [],
   };
   return `${AGENT_RULES}\n\nTask: ${agent.task}\n\n${DATA_MARKER}\n${JSON.stringify(data)}`;
 }

@@ -1,6 +1,7 @@
 import type {
   AgentRunInput,
   AgentRunView,
+  BrowserIntent,
   ClusterRun,
   Message,
   PlanItem,
@@ -8,6 +9,12 @@ import type {
   Suggestion,
   TabEvent,
   TabRef,
+  ToolErrorCode,
+  ToolResult,
+  ToolRunView,
+  ToolStepNote,
+  ExternalLink,
+  RefusedStep,
   User,
   Workspace,
 } from "@ai-browser/shared";
@@ -251,4 +258,44 @@ export const PLAN_ITEM_COLUMNS = "id, user_id, workspace_id, text, done, sort_or
 
 export function mapPlanItem(row: DbPlanItem): PlanItem {
   return { id: row.id, userId: row.user_id, workspaceId: row.workspace_id, text: row.text, done: row.done, sortOrder: row.sort_order };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Map an action_runs row whose action_id is a tool id (feature 010b). */
+export function mapToolRun(row: DbActionRun): ToolRunView {
+  const output = row.output;
+  const awaiting = output && isRecord(output.awaiting) && Array.isArray((output.awaiting as { intents?: unknown }).intents)
+    ? ((output.awaiting as { intents: BrowserIntent[] }).intents as BrowserIntent[])
+    : null;
+  const succeeded = row.status === "succeeded" && output !== null && isRecord(output) && "result" in output;
+  const failed = row.status === "failed" && output !== null && isRecord(output) && isRecord(output.error);
+  const input = isRecord(row.input) ? row.input : {};
+  const label = typeof input.label === "string" ? input.label : null;
+  return {
+    id: row.id,
+    toolId: row.action_id,
+    state: row.status === "pending" ? "running" : row.status,
+    createdAt: iso(row.created_at),
+    label,
+    output: succeeded
+      ? {
+          result: output.result as ToolResult,
+          links: Array.isArray(output.links) ? (output.links as ExternalLink[]) : [],
+          steps: Array.isArray(output.steps) ? (output.steps as ToolStepNote[]) : [],
+          refused: Array.isArray(output.refused) ? (output.refused as RefusedStep[]) : [],
+          stoppedAtLimit: output.stoppedAtLimit === true,
+        }
+      : null,
+    error: failed
+      ? {
+          code: ((output.error as { code?: string }).code ?? "model_error") as ToolErrorCode,
+          message: String((output.error as { message?: string }).message ?? "This run did not finish. You can try again."),
+          partial: typeof (output.error as { partial?: unknown }).partial === "string" ? (output.error as { partial: string }).partial : null,
+        }
+      : null,
+    awaitingIntents: row.status === "pending" && awaiting && awaiting.length > 0 ? awaiting : null,
+  };
 }

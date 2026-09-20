@@ -919,6 +919,9 @@ input:focus,
 }
 
 .band-agents {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
   padding: 16px;
 }
 

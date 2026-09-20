@@ -98,7 +98,7 @@ describe("buildContext: which rows", () => {
   it("an empty workspace says so in the data and invents nothing", async () => {
     const ws = await makeWorkspace(ALICE, "Empty");
     const { data, info, messages } = await contextFor(ALICE, ws.id);
-    expect(data).toEqual({ workspace: { name: "Empty", tabsInWorkspace: 0, tabsShown: 0 }, tabs: [], plan: [] });
+    expect(data).toEqual({ workspace: { name: "Empty", tabsInWorkspace: 0, tabsShown: 0 }, tabs: [], plan: [], summary: null, savedQueries: [], refs: [] });
     expect(info).toEqual({ tabsIncluded: 0, tabsTotal: 0, planItemsIncluded: 0, messagesIncluded: 0 });
     expect(messages).toEqual([]);
   });

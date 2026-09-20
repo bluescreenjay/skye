@@ -1,0 +1,121 @@
+/* Suggested actions on a workspace card (feature 010b). Plain text only. */
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  color: var(--ink, #4d626e);
+  font-size: 13px;
+  font-weight: 300;
+  line-height: 1.45;
+}
+
+.ax-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ax-name {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.ax-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--accent-20, rgba(219, 91, 69, 0.2));
+  border-radius: var(--radius-sm, 8px);
+  background: var(--card, rgba(255, 255, 255, 0.88));
+}
+
+.ax-row-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ax-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.ax-label {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.ax-reason,
+.ax-preview,
+.ax-empty,
+.ax-note {
+  font-size: 12px;
+  font-weight: 200;
+  overflow-wrap: anywhere;
+}
+
+.ax-note.is-alert {
+  color: var(--accent, #db5b45);
+}
+
+.ax-run {
+  flex: 0 0 auto;
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-sm, 8px);
+  background: var(--accent, #db5b45);
+  color: var(--white, #fff);
+  font-size: 12px;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.ax-run:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.ax-retry,
+.ax-link {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+  text-align: left;
+}
+
+.ax-text {
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-transform: none;
+}
+
+.ax-list {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.ax-mail-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ax-mail-actions input {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+}

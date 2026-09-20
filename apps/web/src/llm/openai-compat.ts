@@ -28,6 +28,7 @@ const MAX_BACKOFF_MS = 8_000;
 export const DEFAULT_MODELS: Record<Purpose, string> = {
   cluster: "gpt-oss-120b-thinking-low",
   command: "gpt-oss-120b-thinking-low",
+  suggest: "gpt-oss-120b-thinking-low",
   // Low effort for chat too: measured first words 0.3 s, against 0.5 to 4.2 s (varying with load) for medium.
   chat: "gpt-oss-120b-thinking-low",
   actions: "gpt-oss-120b",
