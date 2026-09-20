@@ -17,7 +17,7 @@ import { getAgentModel, type AgentModel } from "./model";
 import { buildPrompt, type RunMaterial } from "./prompt";
 import { countPagesToRead, readPages } from "./pages/read-pages";
 import { rewriteChecklist } from "./plan-items";
-import { failRun, finishRunSucceeded, insertPendingRun } from "./runs";
+import { applyRetention, failRun, finishRunSucceeded, insertPendingRun } from "./runs";
 import { validateAnswer, type MaterialTab } from "./validate";
 
 let jobLimitOverride: number | null = null;
@@ -47,6 +47,11 @@ export async function startAgentRun(userId: string, workspace: Pick<DbWorkspace,
   const run = await insertPendingRun(userId, workspace.id, agent.id, input);
   startJob(() => executeRun(run.id, userId, workspace.id, agent, gathered, model));
   return run;
+}
+
+/** Trims old runs after a finish. A failure here never changes how the run ended, and it never throws. */
+async function keepRecentRuns(userId: string, workspaceId: string, agentId: string): Promise<void> {
+  await applyRetention({ query }, userId, workspaceId, agentId).catch(() => undefined);
 }
 
 /** The job. It marks its own run failed on any error, so it never throws. */
@@ -92,9 +97,11 @@ async function executeRun(runId: string, userId: string, workspaceId: string, ag
     } else {
       await finishRunSucceeded({ query }, runId, userId, output);
     }
+    await keepRecentRuns(userId, workspaceId, agent.id);
   } catch (error) {
     if (error instanceof AbandonedRun) return; // already reaped as stale and marked failed: leave it as it is
     await failRun(runId, userId, failureFor(error, { timedOut: controller.signal.aborted }));
+    await keepRecentRuns(userId, workspaceId, agent.id);
   } finally {
     clearTimeout(timer);
   }

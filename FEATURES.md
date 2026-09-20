@@ -25,7 +25,7 @@ How to use: for each feature, run `/speckit-specify` and paste the **Specify pro
 | 007b | Chrome tab groups + create workspace | Stretch | ☐ |
 | 008 | Workspace AI chat | P0 | ☑ implemented (server side: the chat API; Home card chat wired; sidebar chat panel still a shell from 006) |
 | 009 | Plan generation | — | ✂ cut (its checklist is an output of the 010 agents) |
-| 010 | Workspace agents | P0 | ☐ |
+| 010 | Workspace agents | P0 | ☑ implemented (Home card first; the sidebar reuses the list later) |
 | 010b | MCP + local action tools | Stretch | ☐ |
 | 011 | Global command bar | P0 | ☐ |
 | 012 | Saved workspaces + soft suggestions | P1 | ☐ |

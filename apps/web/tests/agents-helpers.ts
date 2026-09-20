@@ -1,9 +1,10 @@
 // Helpers for the agents tests: a fake agent model (no network, ever) that records every call and
 // stops promptly when aborted, builders for valid answers of each kind, and the seeding wrappers
 // from the chat tests, and wrappers that call the routes (`getAgents`, `pressAgent`, `runAndWait`,
-// `tickItem`; `getRuns` is added with its route).
+// `tickItem`, `getRuns`).
 import { GET as agentsGet } from "@/app/api/workspaces/[id]/agents/route";
 import { PATCH as planItemPatch } from "@/app/api/workspaces/[id]/plan-items/[itemId]/route";
+import { GET as runsGet } from "@/app/api/workspaces/[id]/agents/[agentId]/runs/route";
 import { POST as agentRunPost } from "@/app/api/workspaces/[id]/agents/[agentId]/run/route";
 import { idle, resetJobsForTests } from "@/src/agents/jobs";
 import { setAgentModelForTests, type AgentModel, type AgentModelInput } from "@/src/agents/model";
@@ -155,6 +156,15 @@ export function getAgents(token: string | null, workspaceId: string) {
 export function pressAgent(token: string | null, workspaceId: string, agentId: string) {
   return read(
     agentRunPost(req("POST", `/api/workspaces/${workspaceId}/agents/${agentId}/run`, token), {
+      params: Promise.resolve({ id: workspaceId, agentId }),
+    }),
+  );
+}
+
+/** GET /api/workspaces/:id/agents/:agentId/runs, with an optional query string such as "?limit=3&before=<id>". */
+export function getRuns(token: string | null, workspaceId: string, agentId: string, queryString = "") {
+  return read(
+    runsGet(req("GET", `/api/workspaces/${workspaceId}/agents/${agentId}/runs${queryString}`, token), {
       params: Promise.resolve({ id: workspaceId, agentId }),
     }),
   );

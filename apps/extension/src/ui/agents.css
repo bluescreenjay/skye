@@ -1,0 +1,260 @@
+/* The agents card (feature 010). Every value is var(--token, fallback) so the same file works on Home
+   and, later, in the Side Panel. Everything drawn here is text: no images, no links. */
+
+.agents {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  color: var(--ink, #4d626e);
+  font-size: 13px;
+  font-weight: 300;
+  line-height: 1.45;
+}
+
+.ag-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--accent-20, rgba(219, 91, 69, 0.2));
+  border-radius: var(--radius-sm, 8px);
+  background: var(--card, rgba(255, 255, 255, 0.88));
+}
+
+.ag-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ag-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ag-name {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.ag-desc {
+  font-size: 12px;
+  font-weight: 200;
+  overflow-wrap: anywhere;
+}
+
+.ag-run {
+  flex: 0 0 auto;
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-sm, 8px);
+  background: var(--accent, #db5b45);
+  color: var(--white, #fff);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  cursor: pointer;
+}
+
+.ag-run:active {
+  opacity: 0.85;
+}
+
+.ag-run:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.ag-result {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* The host page may lowercase everything (Home does). Labels and notes can follow it, but a result is
+   content: a quote, a name, or a checklist item must show exactly as it was written. */
+.ag-text,
+.ag-table,
+.ag-link,
+.ag-checks span,
+.ag-checks.is-plain li,
+.ag-quote {
+  text-transform: none;
+}
+
+/* A result is text: keep its own line breaks, and break a long unbroken string instead of overflowing. */
+.ag-text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ag-from,
+.ag-coverage {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 300;
+  overflow-wrap: anywhere;
+  color: var(--ink-40, rgba(77, 98, 110, 0.7));
+}
+
+.ag-coverage {
+  padding-top: 6px;
+  border-top: 1px solid var(--accent-12, rgba(219, 91, 69, 0.12));
+}
+
+/* A tab named in a result: looks like a small text link but is a button that asks the host to open the person's own tab. */
+.ag-link {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent, #db5b45);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.ag-quote {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 10px;
+  border-left: 2px solid var(--accent-20, rgba(219, 91, 69, 0.2));
+  font-size: 12px;
+}
+
+.ag-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.ag-table {
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.ag-table th,
+.ag-table td {
+  padding: 5px 8px;
+  border: 1px solid var(--accent-12, rgba(219, 91, 69, 0.12));
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.ag-table thead th {
+  font-weight: 700;
+  background: var(--accent-06, rgba(219, 91, 69, 0.06));
+}
+
+.ag-table tbody th {
+  font-weight: 700;
+}
+
+.ag-checks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ag-checks label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.ag-checks input {
+  margin: 3px 0 0;
+  accent-color: var(--accent, #db5b45);
+}
+
+.ag-checks span {
+  overflow-wrap: anywhere;
+}
+
+.ag-checks label.is-done span {
+  text-decoration: line-through;
+  color: var(--ink-40, rgba(77, 98, 110, 0.7));
+}
+
+.ag-checks.is-plain {
+  list-style: decimal inside;
+  gap: 2px;
+}
+
+.ag-note {
+  margin: 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.ag-note.is-alert {
+  color: var(--accent, #db5b45);
+}
+
+.ag-retry {
+  margin-left: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.ag-empty {
+  margin: 0;
+  padding: 8px 2px;
+  font-size: 12px;
+}
+
+.ag-earlier {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.ag-earlier > .ag-retry {
+  margin-left: 0;
+}
+
+.ag-old-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+
+.ag-old {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 10px;
+  border-left: 2px solid var(--accent-12, rgba(219, 91, 69, 0.12));
+  font-size: 12px;
+}
+
+.ag-old-head {
+  margin: 0;
+  font-size: 11px;
+  color: var(--ink-40, rgba(77, 98, 110, 0.7));
+  overflow-wrap: anywhere;
+}

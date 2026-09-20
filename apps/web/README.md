@@ -36,6 +36,8 @@ Pairing and workspace curls: `specs/003-workspace-persistence-api/quickstart.md`
 | `GET /api/suggestions`, `POST /api/suggestions/:id/accept`, `POST /api/suggestions/:id/ignore` | Suggestions the AI was not sure enough to apply |
 | `GET /api/overview` | Home's read: workspaces with tabs, Other, and pending suggestions in one call |
 | `POST /api/workspaces/:id/chat`, `GET /api/workspaces/:id/chat` | Ask about a workspace and get a streamed answer; read its saved conversation (feature 008) |
+| `GET /api/workspaces/:id/agents`, `POST /api/workspaces/:id/agents/:agentId/run` | Read a workspace's agents card in one call (no AI request); press an agent, which returns `202` at once with a running run (feature 010) |
+| `GET /api/workspaces/:id/agents/:agentId/runs`, `PATCH /api/workspaces/:id/plan-items/:itemId` | An agent's earlier runs, newest first; tick or untick a "next steps" checklist item (feature 010) |
 
 ## Tests
 
@@ -100,4 +102,39 @@ Automated tests use a fake chat model and never call a real provider. An opt-in 
 ```bash
 CHAT_LIVE=1 pnpm --filter @ai-browser/web test chat-live --disable-console-intercept                       # the default (vt) provider
 LLM_PROVIDER=gemini CHAT_LIVE=1 pnpm --filter @ai-browser/web test chat-live --disable-console-intercept   # the backup
+```
+
+## Agents (feature 010)
+
+Five one-shot agents run on **one workspace**: `summarize`, `compare`, `what's missing`, `next steps`, and `collect refs`. Pressing one reads a few of the workspace's public pages, asks the AI **once**, checks the answer, and saves it as a run in the existing `action_runs` table. `next steps` also rewrites the workspace's `plan_items` (ticked items stay, unticked ones are replaced), which is the checklist the workspace chat already reads. This is the server side of the Home card's agents column; the sidebar reuses the same list later. Design and contracts: `specs/010-workspace-agents/` (`contracts/http.md` is the one to read).
+
+- **A model is called only when an agent is pressed**, once per run, with no automatic retry. Reading the card or the runs, changing tabs, ingest, clustering, chat, and every refused press make no agent request. Nothing is charged for a refused press.
+- **Run lifecycle.** A press stores a `pending` run (shown as `running`) and returns `202` immediately; the job carries on in the server process. It ends `succeeded` (with a validated result) or `failed` (with one of four fixed sentences, never the AI service's own words). A run still pending after 120 seconds is marked `failed` (`timed_out`) by the next read or press, so a stopped server never leaves a run "running" forever, and a late job then writes nothing. The whole job is limited to 50 seconds.
+- **Limits.** One run of an agent at a time per workspace (`409 run_in_progress`); three runs at a time per person (`429 too_many_runs`); the latest 10 runs per agent per workspace are kept, plus the newest successful one if it is older.
+- **Reading pages.** Each distinct page is read once, at its address **without the query string and fragment**, by a small reader (`src/agents/pages/`) that connects only to addresses it has checked: `https` on port 443 only, no credentials, no IP literals or local names, every resolved address must be public, redirects (at most 2) are re-checked, and no cookie or authorization is ever sent. A page that cannot be read (needs sign-in, too large, too slow, not a web page, no text) is described from its title, address, and stored excerpt, and the run says so in `sources`. Page text is untrusted data: it goes only inside one JSON block of the prompt.
+- **Nothing crosses a boundary.** Every query is scoped to the signed-in user and the workspace; `other` (tabs with no workspace) is `400 not_a_workspace`. Titles, addresses, excerpts, page text, plan items, chat messages, prompts, and answers are never logged, and never appear in an error body. Quotes are kept only if they really appear in the material of the tab they cite.
+- **Model.** Agents use the `actions` purpose, which defaults to `gpt-oss-120b` on the VT provider (override with `LLM_MODEL_ACTIONS`; `LLM_PROVIDER=gemini` uses the backup), and share the daily guardrail (the `actions` share is 120 of `LLM_DAILY_CAP`). The former `plan` purpose no longer exists.
+- **Rules for clients.** Render every result as plain text (never HTML or markdown; never load an image, embed, or link from a result); show the coverage line ("read 6 of 9 tabs; 3 not read: needs sign-in (2), …"); poll the card only while some agent is running; treat `409 run_in_progress` as "already running"; only the current checklist is tickable. The full list is in `contracts/http.md`.
+
+Page reading can be tuned with environment variables (defaults in `src/agents/limits.ts`; a bad value falls back to the default):
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `AGENT_MAX_PAGES` | `8` | pages read per run (the rest are marked over the limit) |
+| `AGENT_PAGE_TIMEOUT_MS` | `8000` | time one page may take |
+| `AGENT_READ_BUDGET_MS` | `12000` | time the whole reading step may take (pages are read 4 at a time) |
+| `AGENT_PAGE_BYTES` | `500000` | bytes read from one page, after decompression |
+| `AGENT_PAGE_CHARS` | `4000` | characters of text kept from one page |
+
+The only schema change is three indexes, from `packages/shared/sql/010_agents.sql` (needs 001 first; safe to re-run):
+
+```bash
+node apps/web/scripts/apply-sql.mjs packages/shared/sql/010_agents.sql   # writes to the database in DATABASE_URL
+```
+
+Automated tests use a fake agent model and a fake page reader and never call a real provider or the internet. An opt-in check calls the active provider for real (about 15 requests; on the VT provider you must be on the VPN) against an in-process database, never the one in `.env`:
+
+```bash
+AGENTS_LIVE=1 pnpm --filter @ai-browser/web test agents-live --disable-console-intercept                       # the default (vt) provider
+LLM_PROVIDER=gemini AGENTS_LIVE=1 pnpm --filter @ai-browser/web test agents-live --disable-console-intercept   # the backup
 ```

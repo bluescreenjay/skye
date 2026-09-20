@@ -755,14 +755,6 @@ input:focus,
   animation: rail-in 0.4s var(--ease-in) both;
 }
 
-.btn {
-  transition: opacity 0.25s var(--ease-in), transform 0.28s var(--ease-in);
-}
-
-.btn:hover {
-  transform: translateY(-1px);
-}
-
 .home-btn {
   transition: opacity 0.25s var(--ease-in);
 }
@@ -812,12 +804,10 @@ input:focus,
   .tab-row.is-entering,
   .app.view-enter[data-view="home"] .card,
   .app.view-enter .rail-icon,
-  .app.view-enter .group-tile,
-  .artifact-body {
+  .app.view-enter .group-tile {
     animation: none;
   }
 
-  .btn,
   .tab-row,
   .rail-icon,
   .group-tile,
@@ -919,7 +909,7 @@ input:focus,
   background: var(--accent-10, var(--accent-06));
 }
 
-.band-actions {
+.band-chat {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -928,27 +918,8 @@ input:focus,
   overflow: hidden;
 }
 
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  flex: 0 0 auto;
-}
-
-.btn {
-  height: 32px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: var(--accent);
-  color: var(--white);
-  font-size: 12px;
-  font-weight: 400;
-  letter-spacing: -0.02em;
-}
-
-.btn:active {
-  opacity: 0.85;
+.band-agents {
+  padding: 16px;
 }
 
 .chat {
@@ -1051,71 +1022,6 @@ input:focus,
   border-radius: 0;
   background: transparent;
   padding: 0 12px;
-  font-size: 13px;
-  font-weight: 300;
-  color: var(--ink);
-}
-
-.artifact {
-  display: flex;
-  flex-direction: column;
-}
-
-.artifact-head {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  width: 100%;
-  margin: 0;
-  padding: 11px 12px;
-  border: 0;
-  background: transparent;
-  text-align: left;
-  font-size: 13px;
-}
-
-.artifact.is-open .artifact-head {
-  background: var(--accent-06);
-}
-
-.artifact-kind {
-  flex: 0 0 auto;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  font-size: 11px;
-}
-
-.artifact-title {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--ink);
-  font-weight: 300;
-}
-
-.artifact-body {
-  padding: 0 12px 12px;
-  font-size: 12px;
-  font-weight: 200;
-  color: var(--ink);
-  line-height: 1.45;
-  animation: artifact-open 0.32s var(--ease-in) both;
-}
-
-@keyframes artifact-open {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.empty {
-  padding: 16px 12px;
   font-size: 13px;
   font-weight: 300;
   color: var(--ink);
