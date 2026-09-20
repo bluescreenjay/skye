@@ -1,11 +1,18 @@
 // Helpers for the agents tests: a fake agent model (no network, ever) that records every call and
 // stops promptly when aborted, builders for valid answers of each kind, and the seeding wrappers
-// from the chat tests. The wrappers that call the routes (`getAgents`, `pressAgent`, `getRuns`,
-// `tickItem`, `runAndWait`) are added with the routes.
+// from the chat tests, and wrappers that call the routes (`getAgents`, `pressAgent`, `runAndWait`,
+// `tickItem`, `getRuns`).
+import { GET as agentsGet } from "@/app/api/workspaces/[id]/agents/route";
+import { PATCH as planItemPatch } from "@/app/api/workspaces/[id]/plan-items/[itemId]/route";
+import { GET as runsGet } from "@/app/api/workspaces/[id]/agents/[agentId]/runs/route";
+import { POST as agentRunPost } from "@/app/api/workspaces/[id]/agents/[agentId]/run/route";
 import { idle, resetJobsForTests } from "@/src/agents/jobs";
 import { setAgentModelForTests, type AgentModel, type AgentModelInput } from "@/src/agents/model";
+import { resetReadSlotsForTests, setPageFetcherForTests, type PageFetcher } from "@/src/agents/pages/read-pages";
+import type { PageResult } from "@/src/agents/pages/fetch-page";
 import { resetForTests as resetBudget } from "@/src/llm/budget";
 import { resetLimiterForTests } from "@/src/llm/limiter";
+import { read, req } from "./helpers";
 
 export { addMessageAt, addPlanItem, countMessages, gate, makeWorkspace, putTabsIn, userIdOf } from "./chat-helpers";
 export { idle };
@@ -71,11 +78,47 @@ export function fakeAgentModel(script?: AgentScript): FakeAgentModel {
   };
 }
 
-/** Installs a fake agent model for the current test and resets the budget, the limiter, and the job registry. */
+/** What a page read looks like when nothing could be read. */
+export const UNREADABLE: PageResult = { text: null, reason: "error", truncated: false };
+
+export interface FakePageFetcher extends PageFetcher {
+  /** Every address it was asked for, in order. */
+  requested: string[];
+}
+
+/**
+ * A page fetcher that answers per plain address from `pages` (no network, ever) and records every
+ * address it was asked for. A string is the page's text; anything not listed is unreadable.
+ */
+export function fakePageFetcher(pages: Record<string, string | PageResult | (() => Promise<PageResult>)> = {}): FakePageFetcher {
+  const requested: string[] = [];
+  const fetcher: PageFetcher = async (url) => {
+    requested.push(url);
+    const answer = pages[url];
+    if (answer === undefined) return UNREADABLE;
+    if (typeof answer === "function") return answer();
+    return typeof answer === "string" ? { text: answer, reason: null, truncated: false } : answer;
+  };
+  return Object.assign(fetcher, { requested });
+}
+
+/** Installs a fake page fetcher for the current test. `installFakeAgentModel` already installs one that reads nothing. */
+export function installFakePages(pages: Record<string, string | PageResult | (() => Promise<PageResult>)> = {}): FakePageFetcher {
+  const fake = fakePageFetcher(pages);
+  setPageFetcherForTests(fake);
+  return fake;
+}
+
+/**
+ * Installs a fake agent model for the current test and resets the budget, the limiter, and the job
+ * registry. It also installs a page fetcher that can read nothing, so no test can reach the network.
+ */
 export function installFakeAgentModel(script?: AgentScript): FakeAgentModel {
   resetBudget();
   resetLimiterForTests();
   resetJobsForTests();
+  resetReadSlotsForTests();
+  setPageFetcherForTests(fakePageFetcher());
   const model = fakeAgentModel(script);
   setAgentModelForTests(model);
   return model;
@@ -85,6 +128,8 @@ export function installFakeAgentModel(script?: AgentScript): FakeAgentModel {
 export async function restoreAgentModel(): Promise<void> {
   await idle();
   setAgentModelForTests(null);
+  setPageFetcherForTests(null);
+  resetReadSlotsForTests();
   resetBudget();
   resetLimiterForTests();
   resetJobsForTests();
@@ -99,3 +144,41 @@ export const comparisonAnswer = (criteria: string[], options: { name: string; ta
   options,
   verdict,
 });
+
+// ---- route wrappers (call the handlers the way a client would) --------------------------------
+
+/** GET /api/workspaces/:id/agents. */
+export function getAgents(token: string | null, workspaceId: string) {
+  return read(agentsGet(req("GET", `/api/workspaces/${workspaceId}/agents`, token), { params: Promise.resolve({ id: workspaceId }) }));
+}
+
+/** POST /api/workspaces/:id/agents/:agentId/run. */
+export function pressAgent(token: string | null, workspaceId: string, agentId: string) {
+  return read(
+    agentRunPost(req("POST", `/api/workspaces/${workspaceId}/agents/${agentId}/run`, token), {
+      params: Promise.resolve({ id: workspaceId, agentId }),
+    }),
+  );
+}
+
+/** GET /api/workspaces/:id/agents/:agentId/runs, with an optional query string such as "?limit=3&before=<id>". */
+export function getRuns(token: string | null, workspaceId: string, agentId: string, queryString = "") {
+  return read(
+    runsGet(req("GET", `/api/workspaces/${workspaceId}/agents/${agentId}/runs${queryString}`, token), {
+      params: Promise.resolve({ id: workspaceId, agentId }),
+    }),
+  );
+}
+
+/** PATCH /api/workspaces/:id/plan-items/:itemId. The body is sent as given (`{ done: true }` by default). */
+export function tickItem(token: string | null, workspaceId: string, itemId: string, body: unknown = { done: true }) {
+  return read(planItemPatch(req("PATCH", `/api/workspaces/${workspaceId}/plan-items/${itemId}`, token, body), { params: Promise.resolve({ id: workspaceId, itemId }) }));
+}
+
+/** Presses an agent, waits for its job to finish, and returns the press reply and the agents read after it. */
+export async function runAndWait(token: string, workspaceId: string, agentId: string) {
+  const pressed = await pressAgent(token, workspaceId, agentId);
+  await idle();
+  const agents = await getAgents(token, workspaceId);
+  return { pressed, agents };
+}

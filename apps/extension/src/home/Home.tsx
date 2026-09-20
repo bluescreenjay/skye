@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type DragEvent, type MouseEvent } from "react";
 import type { TabRef, Workspace } from "@ai-browser/shared";
 import { TabMark } from "../ui/TabMark";
+import { AgentsColumn } from "../ui/AgentsColumn";
+import { matchesAddress } from "../ui/agents";
 import { TabRow } from "../ui/TabRow";
 import { loadDirectory, moveTab, renameWorkspace, runCluster } from "./api";
 import {
@@ -16,8 +18,6 @@ import { loadWeatherPhrase } from "./weather";
 import { WorkspaceChat } from "./WorkspaceChat";
 import { createPairingOffer, loadDevices, revokeDevice } from "./pairing";
 import type { Device } from "@ai-browser/shared";
-
-const ACTIONS = ["summarize", "collect refs", "new artifact"] as const;
 
 function formatTime(): string {
   return new Date()
@@ -415,6 +415,13 @@ function WorkspaceCardView({
 }) {
   const name = card.workspace.name.toLowerCase();
 
+  // A result names a page by its plain address. Opening it means focusing the person's own tab for it
+  // in this workspace (or reopening the saved one); an address that is no longer a tab here is not opened.
+  const openCitedTab = (url: string) => {
+    const tab = card.tabs.find((candidate) => matchesAddress(candidate.url, url));
+    if (tab) void openHomeTab(tab);
+  };
+
   return (
     <article
       className={`card${expanded ? " is-open" : ""}${isRising ? " is-rising" : ""}${dropTarget === card.workspace.id ? " is-drop" : ""}`}
@@ -458,23 +465,11 @@ function WorkspaceCardView({
               />
             ))}
           </div>
-          <div className="band band-actions">
-            <div className="actions">
-              {ACTIONS.map((label) => (
-                <button
-                  key={label}
-                  className="btn"
-                  type="button"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+          <div className="band band-chat">
             <WorkspaceChat workspaceId={card.workspace.id} />
           </div>
-          <div className="band band-artifacts">
-            <div className="empty">no artifacts yet</div>
+          <div className="band band-agents">
+            <AgentsColumn workspaceId={card.workspace.id} onOpenTab={openCitedTab} />
           </div>
         </div>
       ) : null}

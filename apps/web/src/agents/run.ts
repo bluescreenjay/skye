@@ -6,7 +6,7 @@
 // Any failure after step 3 marks the run failed with a fixed sentence and changes nothing else. A
 // result is stored as finished only after the whole answer exists and validated. Nothing here logs.
 import type { AgentRunInput, AgentRunView, AgentSource } from "@ai-browser/shared";
-import { query } from "../db";
+import { query, withTransaction } from "../db";
 import type { DbWorkspace } from "../map";
 import type { AgentDef } from "./catalog";
 import { gatherMaterial, type Gathered } from "./context";
@@ -15,7 +15,9 @@ import { JOB_LIMIT_MS } from "./limits";
 import { startJob } from "./jobs";
 import { getAgentModel, type AgentModel } from "./model";
 import { buildPrompt, type RunMaterial } from "./prompt";
-import { failRun, finishRunSucceeded, insertPendingRun } from "./runs";
+import { countPagesToRead, readPages } from "./pages/read-pages";
+import { rewriteChecklist } from "./plan-items";
+import { applyRetention, failRun, finishRunSucceeded, insertPendingRun } from "./runs";
 import { validateAnswer, type MaterialTab } from "./validate";
 
 let jobLimitOverride: number | null = null;
@@ -24,6 +26,9 @@ export function setJobLimitMsForTests(ms: number | null): void {
   jobLimitOverride = ms;
 }
 const jobLimitMs = () => jobLimitOverride ?? JOB_LIMIT_MS;
+
+/** Thrown inside the checklist transaction when the run is no longer pending, to roll it back. Never escapes `executeRun`. */
+class AbandonedRun extends Error {}
 
 /** Press an agent: refuse what must be refused, store a pending run, start the job, and return the pending run. */
 export async function startAgentRun(userId: string, workspace: Pick<DbWorkspace, "id" | "name">, agent: AgentDef): Promise<AgentRunView> {
@@ -35,25 +40,39 @@ export async function startAgentRun(userId: string, workspace: Pick<DbWorkspace,
   const input: AgentRunInput = {
     tabsTotal: gathered.tabsTotal,
     tabsIncluded: gathered.tabs.length,
-    pagesTried: 0,
+    pagesTried: countPagesToRead(gathered.tabs.map((t) => ({ tabId: t.id, url: t.fetchUrl }))),
     chatMessages: gathered.chat.length,
     planItems: gathered.plan.length,
   };
   const run = await insertPendingRun(userId, workspace.id, agent.id, input);
-  startJob(() => executeRun(run.id, userId, agent, gathered, model));
+  startJob(() => executeRun(run.id, userId, workspace.id, agent, gathered, model));
   return run;
 }
 
+/** Trims old runs after a finish. A failure here never changes how the run ended, and it never throws. */
+async function keepRecentRuns(userId: string, workspaceId: string, agentId: string): Promise<void> {
+  await applyRetention({ query }, userId, workspaceId, agentId).catch(() => undefined);
+}
+
 /** The job. It marks its own run failed on any error, so it never throws. */
-async function executeRun(runId: string, userId: string, agent: AgentDef, gathered: Gathered, model: AgentModel): Promise<void> {
+async function executeRun(runId: string, userId: string, workspaceId: string, agent: AgentDef, gathered: Gathered, model: AgentModel): Promise<void> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), jobLimitMs());
   try {
-    const promptTabs: RunMaterial["tabs"] = gathered.tabs.map((t) => ({ id: t.id, title: t.title, url: t.url, read: "excerpt", text: t.excerpt }));
+    // Read the pages first (inside the job, after the run is stored). A tab whose page could not be
+    // read is described from its title, address, and stored excerpt, and the run says so.
+    const outcomes = new Map((await readPages(gathered.tabs.map((t) => ({ tabId: t.id, url: t.fetchUrl })))).map((o) => [o.tabId, o]));
+    const promptTabs: RunMaterial["tabs"] = gathered.tabs.map((t) => {
+      const page = outcomes.get(t.id);
+      return page?.text != null
+        ? { id: t.id, title: t.title, url: t.url, read: "page", text: page.text }
+        : { id: t.id, title: t.title, url: t.url, read: "excerpt", text: t.excerpt };
+    });
+    const pagesRead = promptTabs.filter((t) => t.read === "page").length;
     const material: RunMaterial = {
       workspaceName: gathered.workspaceName,
       tabsTotal: gathered.tabsTotal,
-      pagesRead: 0,
+      pagesRead,
       tabs: promptTabs,
       plan: gathered.plan,
       chat: gathered.chat,
@@ -62,11 +81,27 @@ async function executeRun(runId: string, userId: string, agent: AgentDef, gather
 
     const checkable: MaterialTab[] = promptTabs.map((t) => ({ id: t.id, title: t.title, url: t.url, material: t.text }));
     const result = validateAnswer(agent, answer, checkable);
-    const sources: AgentSource[] = gathered.tabs.map((t) => ({ title: t.title, url: t.url, read: "excerpt", reason: null, trimmed: t.trimmed, truncated: false }));
-    const output = { result, sources, coverage: { tabsTotal: gathered.tabsTotal, tabsIncluded: gathered.tabs.length, pagesRead: 0 } };
-    await finishRunSucceeded({ query }, runId, userId, output);
+    const sources: AgentSource[] = gathered.tabs.map((t, i) => {
+      const page = outcomes.get(t.id);
+      const read = promptTabs[i].read;
+      return { title: t.title, url: t.url, read, reason: read === "page" ? null : (page?.reason ?? "error"), trimmed: t.trimmed, truncated: read === "page" && page?.truncated === true };
+    });
+    const output = { result, sources, coverage: { tabsTotal: gathered.tabsTotal, tabsIncluded: gathered.tabs.length, pagesRead } };
+    if (result.kind === "checklist") {
+      // One transaction: the run finishes and the plan items are rewritten together, or neither. A run
+      // that was already reaped as stale matches no row, so the rollback leaves the checklist alone.
+      await withTransaction(async (client) => {
+        if (!(await finishRunSucceeded(client, runId, userId, output))) throw new AbandonedRun();
+        await rewriteChecklist(client, userId, workspaceId, result.items);
+      });
+    } else {
+      await finishRunSucceeded({ query }, runId, userId, output);
+    }
+    await keepRecentRuns(userId, workspaceId, agent.id);
   } catch (error) {
+    if (error instanceof AbandonedRun) return; // already reaped as stale and marked failed: leave it as it is
     await failRun(runId, userId, failureFor(error, { timedOut: controller.signal.aborted }));
+    await keepRecentRuns(userId, workspaceId, agent.id);
   } finally {
     clearTimeout(timer);
   }
